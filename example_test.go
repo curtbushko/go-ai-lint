@@ -10,8 +10,8 @@ import (
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
-func TestPluginExample(t *testing.T) {
-	newPlugin, err := register.GetPlugin("example")
+func TestGoAILintPlugin(t *testing.T) {
+	newPlugin, err := register.GetPlugin("go-ai-lint")
 	require.NoError(t, err)
 
 	plugin, err := newPlugin(nil)
@@ -19,8 +19,55 @@ func TestPluginExample(t *testing.T) {
 
 	analyzers, err := plugin.BuildAnalyzers()
 	require.NoError(t, err)
+	require.NotEmpty(t, analyzers, "should have at least one analyzer")
 
-	analysistest.Run(t, testdataDir(t), analyzers[0], "testlintdata/todo")
+	// Test deferlint analyzer
+	var deferlintAnalyzer *struct {
+		found bool
+		index int
+	}
+	for idx, analyzer := range analyzers {
+		if analyzer.Name == "deferlint" {
+			deferlintAnalyzer = &struct {
+				found bool
+				index int
+			}{found: true, index: idx}
+			break
+		}
+	}
+	require.NotNil(t, deferlintAnalyzer, "deferlint analyzer should be present")
+
+	// Run deferlint on testdata
+	analysistest.Run(t, testdataDir(t), analyzers[deferlintAnalyzer.index], "deferlint")
+}
+
+func TestGoAILintPluginWithSettings(t *testing.T) {
+	newPlugin, err := register.GetPlugin("go-ai-lint")
+	require.NoError(t, err)
+
+	// Test with specific analyzers enabled
+	settings := map[string]any{
+		"enabled_analyzers": []string{"deferlint"},
+	}
+
+	plugin, err := newPlugin(settings)
+	require.NoError(t, err)
+
+	analyzers, err := plugin.BuildAnalyzers()
+	require.NoError(t, err)
+	require.Len(t, analyzers, 1, "should have exactly one analyzer when filtered")
+	require.Equal(t, "deferlint", analyzers[0].Name)
+}
+
+func TestGoAILintPluginLoadMode(t *testing.T) {
+	newPlugin, err := register.GetPlugin("go-ai-lint")
+	require.NoError(t, err)
+
+	plugin, err := newPlugin(nil)
+	require.NoError(t, err)
+
+	loadMode := plugin.GetLoadMode()
+	require.NotEmpty(t, loadMode, "load mode should not be empty")
 }
 
 func testdataDir(t *testing.T) string {

@@ -1,4 +1,4 @@
-module github.com/golangci/example-plugin-module-linter
+module github.com/curtbushko/go-ai-lint
 
 go 1.23.0
 
