@@ -14,15 +14,15 @@ default: help
 all: lint arch-check test build ## Run all quality checks and build
 
 .PHONY: build
-build: ## Build the binary
+build: ## Build the CLI binary
 	@mkdir -p $(CURDIR)/bin/$(OS)-$(ARCH)
 	@echo "$(DATELOG) Building binary"
-	GOOS=$(OS) GOARCH=$(ARCH) go build -o $(CURDIR)/bin/$(OS)-$(ARCH)/$(BINARY)
+	GOOS=$(OS) GOARCH=$(ARCH) go build -o $(CURDIR)/bin/$(OS)-$(ARCH)/$(BINARY) ./cmd/go-ai-lint
 	@chmod +x $(CURDIR)/bin/$(OS)-$(ARCH)/$(BINARY)
 
 .PHONY: run
-run: ## Run the binary
-	$(CURDIR)/bin/$(OS)-$(ARCH)/$(BINARY)
+run: build ## Run the linter on ./...
+	$(CURDIR)/bin/$(OS)-$(ARCH)/$(BINARY) ./...
 
 .PHONY: clean
 clean: ## Clean /bin directory and coverage files
@@ -30,9 +30,9 @@ clean: ## Clean /bin directory and coverage files
 	@rm -f coverage.out coverage.html
 
 .PHONY: install
-install: ## Install the binary using go install
+install: ## Install the CLI using go install
 	@echo "$(DATELOG) Installing $(BINARY)"
-	GOOS=$(OS) GOARCH=$(ARCH) go install
+	GOOS=$(OS) GOARCH=$(ARCH) go install ./cmd/go-ai-lint
 
 .PHONY: lint
 lint: ## Run golangci-lint
