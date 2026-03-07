@@ -7,7 +7,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -212,5 +211,15 @@ func (c *Config) IsAnalyzerEnabled(name string) bool {
 	return false
 }
 
-// ErrConfigNotFound is returned when no configuration file is found.
-var ErrConfigNotFound = errors.New("configuration file not found")
+// LoadWithOverrides loads configuration with an optional explicit config path.
+// If explicitPath is provided, it loads from that path and returns an error if not found.
+// If explicitPath is empty, it falls back to standard discovery from startDir.
+func LoadWithOverrides(startDir, explicitPath string) (*Config, error) {
+	if explicitPath != "" {
+		if _, err := os.Stat(explicitPath); os.IsNotExist(err) {
+			return nil, fmt.Errorf("config file not found: %s", explicitPath)
+		}
+		return LoadFromPath(explicitPath)
+	}
+	return Load(startDir)
+}

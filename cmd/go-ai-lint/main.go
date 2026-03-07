@@ -9,6 +9,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"golang.org/x/tools/go/analysis/multichecker"
 
 	"github.com/curtbushko/go-ai-lint/internal/application/concurrencylint"
@@ -26,6 +29,18 @@ import (
 )
 
 func main() {
+	// Parse --config flag before delegating to multichecker
+	cli := NewCLI()
+	_, err := cli.ParseConfig(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-ai-lint: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Replace os.Args with remaining args for multichecker
+	// multichecker.Main reads os.Args directly
+	os.Args = append([]string{os.Args[0]}, cli.RemainingArgs()...)
+
 	multichecker.Main(
 		deferlint.New().Analyzer(),
 		contextlint.New().Analyzer(),
