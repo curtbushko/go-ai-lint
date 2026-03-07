@@ -5,6 +5,7 @@ import (
 	"go/ast"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -138,7 +139,7 @@ func (a *analyzer) checkInitBody(pass *analysis.Pass, body *ast.BlockStmt) {
 		// Check for http.* calls (network)
 		if a.isHTTPCall(callExpr) {
 			diag := Diagnostics["AIL100"]
-			pass.Report(analysis.Diagnostic{
+			nolint.Report(pass, analysis.Diagnostic{
 				Pos:      callExpr.Pos(),
 				Category: string(diag.Category),
 				Message:  "AIL100: " + diag.Message,
@@ -149,7 +150,7 @@ func (a *analyzer) checkInitBody(pass *analysis.Pass, body *ast.BlockStmt) {
 		// Check for os.* file I/O calls
 		if a.isFileIOCall(callExpr) {
 			diag := Diagnostics["AIL101"]
-			pass.Report(analysis.Diagnostic{
+			nolint.Report(pass, analysis.Diagnostic{
 				Pos:      callExpr.Pos(),
 				Category: string(diag.Category),
 				Message:  "AIL101: " + diag.Message,

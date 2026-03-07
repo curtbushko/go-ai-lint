@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -136,7 +137,7 @@ func (a *analyzer) checkWithFunction(pass *analysis.Pass, funcDecl *ast.FuncDecl
 
 	// If we get here, the function doesn't return a function type
 	diag := Diagnostics["AIL110"]
-	pass.Report(analysis.Diagnostic{
+	nolint.Report(pass, analysis.Diagnostic{
 		Pos:      funcDecl.Name.Pos(),
 		Category: string(diag.Category),
 		Message:  "AIL110: " + diag.Message,

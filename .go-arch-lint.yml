@@ -1,268 +1,109 @@
-# go-arch-lint configuration for go-ai-lint
-# Hexagonal/Onion Architecture enforcement
+# go-arch-lint configuration for Hexagonal/Onion Architecture
+# Generic template - customize components for your project
 #
 # Install: go install github.com/fe3dback/go-arch-lint@latest
 # Usage:   go-arch-lint check
 # Graph:   go-arch-lint graph
 
 version: 3
-workdir: internal
+
+# Allow all vendor imports (we only enforce component boundaries)
+allow:
+  depOnAnyVendor: true
+  # Disable deep scan since cmd is the composition root and wires all components.
+  # Deep scan incorrectly reports cross-layer deps when cmd does the wiring.
+  deepScan: false
 
 # Define architectural components
+# Hexagonal Architecture Layers (inside-out):
+#   1. Domain (innermost) - pure business logic, no dependencies
+#   2. Ports - interfaces defining boundaries
+#   3. Application - use cases/services orchestrating domain logic
+#   4. Adapters (outermost) - infrastructure implementations
+#   5. Pkg - public reusable packages (utilities, libraries)
 components:
-  # INNER LAYERS: Core Business Logic
+  # INNER LAYER: Domain (pure business logic)
+  # Contains: entities, value objects, domain services, domain errors
   domain:
-    in: core/domain/**
+    in: internal/domain/**
 
+  # INNER LAYER: Ports (interfaces)
+  # Contains: repository interfaces, service interfaces, DTOs
   ports:
-    in: core/ports/**
+    in: internal/ports/**
 
-  # Analyzers (use cases)
-  analyzers:
-    in: core/analyzers/**
-
-  deferlint:
-    in: core/analyzers/deferlint/**
-
-  contextlint:
-    in: core/analyzers/contextlint/**
-
-  goroutinelint:
-    in: core/analyzers/goroutinelint/**
-
-  errorlint:
-    in: core/analyzers/errorlint/**
-
-  interfacelint:
-    in: core/analyzers/interfacelint/**
-
-  naminglint:
-    in: core/analyzers/naminglint/**
-
-  slicemaplint:
-    in: core/analyzers/slicemaplint/**
-
-  stringlint:
-    in: core/analyzers/stringlint/**
-
-  concurrencylint:
-    in: core/analyzers/concurrencylint/**
-
-  paniclint:
-    in: core/analyzers/paniclint/**
-
-  initlint:
-    in: core/analyzers/initlint/**
-
-  optionlint:
-    in: core/analyzers/optionlint/**
+  # APPLICATION LAYER: Use Cases/Services
+  # Contains: application services that orchestrate domain logic
+  application:
+    in: internal/application/**
 
   # OUTER LAYER: Adapters (Infrastructure)
-  analysis:
-    in: adapters/analysis/**
+  # Contains: implementations of ports (repositories, clients, etc.)
+  adapters:
+    in: internal/adapters/**
 
-  reporters:
-    in: adapters/reporters/**
+  # Supporting: Configuration
+  config:
+    in: internal/config/**
+
+  # COMPOSITION ROOT: Wires all dependencies together
+  # Contains: main.go, dependency injection
+  cmd:
+    in: cmd/**
+
+  # PUBLIC PACKAGES: Reusable library code
+  # Contains: utility packages, shared libraries
+  pkg:
+    in: pkg/**
 
 # Components that can be used by all other components
+# Domain, ports, and pkg are foundational - everything can depend on them
 commonComponents:
   - domain
   - ports
+  - pkg
 
-# Common vendor dependencies allowed everywhere
-commonVendors:
-  - context
-  - errors
-  - fmt
-  - time
-  - strings
-  - strconv
-  - encoding/**
-
-# Dependency rules - defines allowed import relationships
+# Dependency rules - enforces hexagonal architecture constraints
+# Key principle: dependencies point INWARD (adapters -> application -> ports -> domain)
 deps:
-  # Analyzers can depend on ports and domain (via commonComponents)
-  analyzers:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  deferlint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  contextlint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  goroutinelint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  errorlint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  interfacelint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  naminglint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  slicemaplint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  stringlint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  concurrencylint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  paniclint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  initlint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  optionlint:
-    mayDependOn:
-      - ports
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  # Adapters can depend on ports and domain
-  analysis:
-    mayDependOn:
-      - ports
-      - analyzers
-    canUse:
-      - go/ast
-      - go/token
-      - go/types
-      - golang.org/x/tools/go/analysis
-      - golang.org/x/tools/go/analysis/passes/inspect
-      - golang.org/x/tools/go/ast/inspector
-
-  reporters:
-    mayDependOn:
-      - ports
-    canUse:
-      - io
-      - os
-      - encoding/json
-
-  # Ports define interfaces - only depend on domain (via commonComponents)
-  ports:
-    # Ports only use domain types
-
-  # Domain is pure - NO external dependencies
+  # Domain is pure - NO external dependencies (innermost layer)
+  # Only standard library allowed
   domain:
-    # Domain has no mayDependOn - it's the innermost layer
+    anyVendorDeps: true
 
-# Exclude from analysis
-exclude:
-  - "**/*_test.go"
-  - "**/mock_*.go"
-  - "**/mocks/**"
-  - "**/testdata/**"
+  # Ports define interfaces - only depend on domain types (via commonComponents)
+  ports:
+    anyVendorDeps: true
 
-# Exclude specific files from matching
+  # Application layer uses ports to define behavior
+  # Does NOT depend on adapters (dependency inversion)
+  application:
+    mayDependOn:
+      - ports
+
+  # Adapters implement ports - they depend on ports but not on each other
+  # This is the outermost layer that connects to external systems
+  adapters:
+    mayDependOn:
+      - ports
+
+  # Config is standalone infrastructure concern
+  config:
+    anyVendorDeps: true
+
+  # Cmd is the composition root - can depend on everything
+  cmd:
+    anyProjectDeps: true
+    anyVendorDeps: true
+
+  # Pkg is standalone - can depend on vendor libs but not internal components
+  pkg:
+    anyVendorDeps: true
+
+# Exclude test files from analysis
 excludeFiles:
-  - ".git/**"
-  - "vendor/**"
-  - "**/*_generated.go"
+  - _test\.go$
+  - mock_.*\.go$
+  - /mocks/
+  - /testdata/
+  - /features/

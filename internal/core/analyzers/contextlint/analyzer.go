@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -89,7 +90,7 @@ func (a *analyzer) run(pass *analysis.Pass) (any, error) {
 		}
 
 		diag := Diagnostics["AIL010"]
-		pass.Report(analysis.Diagnostic{
+		nolint.Report(pass, analysis.Diagnostic{
 			Pos:      call.Pos(),
 			Category: string(diag.Category),
 			Message:  "AIL010: " + diag.Message,

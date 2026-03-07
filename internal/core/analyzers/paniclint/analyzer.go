@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -180,7 +181,7 @@ func (a *analyzer) checkPanicCall(pass *analysis.Pass, call *ast.CallExpr, funcN
 	}
 
 	diag := Diagnostics["AIL090"]
-	pass.Report(analysis.Diagnostic{
+	nolint.Report(pass, analysis.Diagnostic{
 		Pos:      call.Pos(),
 		Category: string(diag.Category),
 		Message:  "AIL090: " + diag.Message,
@@ -235,7 +236,7 @@ func (a *analyzer) isRecoverCall(expr ast.Expr) bool {
 // reportEmptyRecover reports AIL091.
 func (a *analyzer) reportEmptyRecover(pass *analysis.Pass, call *ast.CallExpr) {
 	diag := Diagnostics["AIL091"]
-	pass.Report(analysis.Diagnostic{
+	nolint.Report(pass, analysis.Diagnostic{
 		Pos:      call.Pos(),
 		Category: string(diag.Category),
 		Message:  "AIL091: " + diag.Message,

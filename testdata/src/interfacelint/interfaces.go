@@ -94,5 +94,28 @@ type TwoMethodInterface interface {
 // EmptyInterface is empty - no -er suffix required.
 type EmptyInterface interface{}
 
+// ===== nolint directive tests =====
+
+// SuppressedLargeInterface is suppressed with nolint directive on same line.
+type SuppressedLargeInterface interface { //nolint:interfacelint
+	Method1()
+	Method2()
+	Method3()
+	Method4()
+	Method5()
+	Method6()
+}
+
+// SuppressedValidate is suppressed with nolint on line above.
+//nolint:interfacelint
+type SuppressedValidate interface {
+	Validate() error
+}
+
+// SuppressedAll is suppressed with nolint (all analyzers).
+type SuppressedAll interface { //nolint
+	Process() error
+}
+
 // Helper type for compilation.
 type Item struct{}

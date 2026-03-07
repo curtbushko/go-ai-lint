@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -123,7 +124,7 @@ func (a *analyzer) checkInterfaceSize(pass *analysis.Pass, typeSpec *ast.TypeSpe
 	methodCount := len(interfaceType.Methods.List)
 	if methodCount > maxInterfaceMethods {
 		diag := Diagnostics["AIL040"]
-		pass.Report(analysis.Diagnostic{
+		nolint.Report(pass, analysis.Diagnostic{
 			Pos:      typeSpec.Name.Pos(),
 			Category: string(diag.Category),
 			Message:  fmt.Sprintf("AIL040: interface has %d methods (max %d)", methodCount, maxInterfaceMethods),
@@ -153,7 +154,7 @@ func (a *analyzer) checkSingleMethodNaming(pass *analysis.Pass, typeSpec *ast.Ty
 	}
 
 	diag := Diagnostics["AIL042"]
-	pass.Report(analysis.Diagnostic{
+	nolint.Report(pass, analysis.Diagnostic{
 		Pos:      typeSpec.Name.Pos(),
 		Category: string(diag.Category),
 		Message:  "AIL042: single-method interface should have -er suffix",

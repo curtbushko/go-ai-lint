@@ -5,6 +5,7 @@ import (
 	"go/ast"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -216,7 +217,7 @@ func (a *analyzer) checkGoroutine(pass *analysis.Pass, goStmt *ast.GoStmt) {
 		if hasTimeSleep {
 			// Has time.Sleep - developer intended long-running but forgot cancellation
 			diag := Diagnostics["AIL020"]
-			pass.Report(analysis.Diagnostic{
+			nolint.Report(pass, analysis.Diagnostic{
 				Pos:      goStmt.Pos(),
 				Category: string(diag.Category),
 				Message:  "AIL020: " + diag.Message,
@@ -224,7 +225,7 @@ func (a *analyzer) checkGoroutine(pass *analysis.Pass, goStmt *ast.GoStmt) {
 		} else {
 			// Pure spin loop with no exit at all
 			diag := Diagnostics["AIL021"]
-			pass.Report(analysis.Diagnostic{
+			nolint.Report(pass, analysis.Diagnostic{
 				Pos:      goStmt.Pos(),
 				Category: string(diag.Category),
 				Message:  "AIL021: " + diag.Message,
@@ -355,7 +356,7 @@ func (a *analyzer) checkRangeLoopCapture(pass *analysis.Pass, rangeStmt *ast.Ran
 		capturedVars := a.findCapturedLoopVars(funcLit, loopVars, rangeStmt.Body)
 		for varName := range capturedVars {
 			diag := Diagnostics["AIL022"]
-			pass.Report(analysis.Diagnostic{
+			nolint.Report(pass, analysis.Diagnostic{
 				Pos:      goStmt.Pos(),
 				Category: string(diag.Category),
 				Message:  "AIL022: loop variable '" + varName + "' captured by goroutine",
@@ -400,7 +401,7 @@ func (a *analyzer) checkForLoopCapture(pass *analysis.Pass, forStmt *ast.ForStmt
 		capturedVars := a.findCapturedLoopVars(funcLit, loopVars, forStmt.Body)
 		for varName := range capturedVars {
 			diag := Diagnostics["AIL022"]
-			pass.Report(analysis.Diagnostic{
+			nolint.Report(pass, analysis.Diagnostic{
 				Pos:      goStmt.Pos(),
 				Category: string(diag.Category),
 				Message:  "AIL022: loop variable '" + varName + "' captured by goroutine",

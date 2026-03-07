@@ -34,5 +34,12 @@ go.work.sum
 # Custom for this repo
 /bin
 /temp
-example.so
 .claude/settings.local.json
+.tasks
+
+# Nix-managed config files (from golang-shared-configs flake)
+.golangci.yml
+.go-arch-lint.yml
+.go-ai-lint.yml
+
+go-ai-lint

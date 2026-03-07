@@ -7,6 +7,7 @@ import (
 	"go/types"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -149,7 +150,7 @@ func (a *analyzer) checkByteIteration(pass *analysis.Pass, forStmt *ast.ForStmt)
 	// Check if body accesses s[i] where s is the string
 	if a.bodyAccessesStringIndex(forStmt.Body, stringVar) {
 		diag := Diagnostics["AIL070"]
-		pass.Report(analysis.Diagnostic{
+		nolint.Report(pass, analysis.Diagnostic{
 			Pos:      forStmt.Pos(),
 			Category: string(diag.Category),
 			Message:  "AIL070: " + diag.Message,
@@ -261,7 +262,7 @@ func (a *analyzer) checkStringConcatInLoop(pass *analysis.Pass, body *ast.BlockS
 
 	if hasStringConcat {
 		diag := Diagnostics["AIL071"]
-		pass.Report(analysis.Diagnostic{
+		nolint.Report(pass, analysis.Diagnostic{
 			Pos:      loopPos,
 			Category: string(diag.Category),
 			Message:  "AIL071: " + diag.Message,

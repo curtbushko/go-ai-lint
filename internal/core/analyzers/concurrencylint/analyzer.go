@@ -5,6 +5,7 @@ import (
 	"go/ast"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -146,7 +147,7 @@ func (a *analyzer) checkWaitGroupDone(pass *analysis.Pass, goStmt *ast.GoStmt) {
 
 		if a.isWaitGroupDone(callExpr) {
 			diag := Diagnostics["AIL080"]
-			pass.Report(analysis.Diagnostic{
+			nolint.Report(pass, analysis.Diagnostic{
 				Pos:      callExpr.Pos(),
 				Category: string(diag.Category),
 				Message:  "AIL080: " + diag.Message,
@@ -188,7 +189,7 @@ func (a *analyzer) checkSelectOnlyDefault(pass *analysis.Pass, selectStmt *ast.S
 	// commClause.Comm == nil means it's the default case
 	if commClause.Comm == nil {
 		diag := Diagnostics["AIL082"]
-		pass.Report(analysis.Diagnostic{
+		nolint.Report(pass, analysis.Diagnostic{
 			Pos:      selectStmt.Pos(),
 			Category: string(diag.Category),
 			Message:  "AIL082: " + diag.Message,

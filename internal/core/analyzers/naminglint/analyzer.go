@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -148,7 +149,7 @@ func (a *analyzer) checkGetterPrefix(pass *analysis.Pass, funcDecl *ast.FuncDecl
 
 	// This looks like a simple getter with Get prefix
 	diag := Diagnostics["AIL050"]
-	pass.Report(analysis.Diagnostic{
+	nolint.Report(pass, analysis.Diagnostic{
 		Pos:      funcDecl.Name.Pos(),
 		Category: string(diag.Category),
 		Message:  "AIL050: " + diag.Message,
@@ -170,7 +171,7 @@ func (a *analyzer) checkRedundantPackagePrefix(pass *analysis.Pass, typeSpec *as
 
 	if strings.HasPrefix(typeNameLower, pkgNameLower) && len(typeName) > len(pkgName) {
 		diag := Diagnostics["AIL051"]
-		pass.Report(analysis.Diagnostic{
+		nolint.Report(pass, analysis.Diagnostic{
 			Pos:      typeSpec.Name.Pos(),
 			Category: string(diag.Category),
 			Message:  "AIL051: " + diag.Message,

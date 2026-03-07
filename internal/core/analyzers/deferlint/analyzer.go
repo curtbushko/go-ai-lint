@@ -6,6 +6,7 @@ import (
 	"go/types"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -171,7 +172,7 @@ func (a *analyzer) run(pass *analysis.Pass) (any, error) {
 				// Check AIL001: defer in loop
 				if loopDepth > 0 {
 					diag := Diagnostics["AIL001"]
-					pass.Report(analysis.Diagnostic{
+					nolint.Report(pass, analysis.Diagnostic{
 						Pos:      node.Pos(),
 						Category: string(diag.Category),
 						Message:  "AIL001: " + diag.Message,
@@ -222,7 +223,7 @@ func (a *analyzer) checkDeferredErrorIgnored(pass *analysis.Pass, deferStmt *ast
 	}
 
 	diag := Diagnostics[diagID]
-	pass.Report(analysis.Diagnostic{
+	nolint.Report(pass, analysis.Diagnostic{
 		Pos:      deferStmt.Pos(),
 		Category: string(diag.Category),
 		Message:  diagID + ": " + diag.Message,

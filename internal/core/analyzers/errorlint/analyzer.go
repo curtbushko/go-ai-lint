@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/core/nolint"
 	"github.com/curtbushko/go-ai-lint/internal/core/ports"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -159,7 +160,7 @@ func (a *analyzer) checkErrorHandledTwice(pass *analysis.Pass, ifStmt *ast.IfStm
 	// Report if both logging and returning the same error
 	if hasLogCall && hasReturnError && (loggedErrVar == returnedErrVar || loggedErrVar == errVar) {
 		diag := Diagnostics["AIL030"]
-		pass.Report(analysis.Diagnostic{
+		nolint.Report(pass, analysis.Diagnostic{
 			Pos:      ifStmt.Cond.Pos(),
 			Category: string(diag.Category),
 			Message:  "AIL030: " + diag.Message,
@@ -286,7 +287,7 @@ func (a *analyzer) checkErrorFmtNotWrapped(pass *analysis.Pass, call *ast.CallEx
 		// Check if the corresponding format verb is %v or %s instead of %w
 		if a.hasNonWrappingVerbForError(formatStr, argIdx) {
 			diag := Diagnostics["AIL033"]
-			pass.Report(analysis.Diagnostic{
+			nolint.Report(pass, analysis.Diagnostic{
 				Pos:      call.Pos(),
 				Category: string(diag.Category),
 				Message:  "AIL033: " + diag.Message,
