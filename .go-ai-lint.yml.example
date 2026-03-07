@@ -1,0 +1,36 @@
+# Example go-ai-lint configuration
+# Copy to .go-ai-lint.yml to use
+#
+# Config file search order:
+# 1. Explicit path via --config flag
+# 2. .go-ai-lint.yml in current directory
+# 3. .go-ai-lint.yml in parent directories (up to root)
+# 4. Built-in defaults
+
+version: 1
+
+run:
+  timeout: 5m
+  concurrency: 0  # auto (uses CPU count)
+  skip-dirs: []
+  skip-files: []
+
+output:
+  format: text  # text, json, ai, sarif
+  print-analyzer-name: true
+  sort-by: file
+
+nolint:
+  enabled: true
+  require-specific: false
+
+analyzers:
+  enable-all: true
+  # Uncomment to disable specific analyzers:
+  # disable:
+  #   - deferlint
+  #   - errorlint
+
+severity:
+  min-severity: low  # low, medium, high, critical
+  error-on: []       # e.g., [high, critical] to fail CI on these

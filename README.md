@@ -12,61 +12,31 @@ The project follows hexagonal (ports and adapters) architecture for clean separa
 
 ```mermaid
 graph TB
-    subgraph "External"
-        CLI[CLI - cmd/go-ai-lint]
-        Plugin[golangci-lint Plugin - plugin.go]
+    subgraph External
+        CLI[CLI]
+        Plugin[golangci-lint Plugin]
     end
 
-    subgraph "Application Layer"
-        direction TB
-        DL[deferlint]
-        CL[contextlint]
-        GL[goroutinelint]
-        EL[errorlint]
-        IL[interfacelint]
-        NL[naminglint]
-        SML[slicemaplint]
-        STL[stringlint]
-        CCL[concurrencylint]
-        PL[paniclint]
-        INL[initlint]
-        OL[optionlint]
+    subgraph Application
+        Analyzers[Analyzers<br/>deferlint, contextlint, errorlint, ...]
     end
 
-    subgraph "Ports Layer"
+    subgraph Ports
         AP[Analyzer Port]
         RP[Reporter Port]
     end
 
-    subgraph "Domain Layer"
-        Issue[Issue]
-        Severity[Severity]
-        Category[Category]
-        DiagTemplate[DiagnosticTemplate]
-        NoLint[NoLint Directives]
+    subgraph Domain
+        Core[Issue, Severity, Category,<br/>DiagnosticTemplate, NoLint]
     end
 
-    subgraph "Adapters Layer"
-        TR[Text Reporter]
-        JR[JSON Reporter]
-        AR[AI Reporter]
-        SR[SARIF Reporter]
+    subgraph Adapters
+        Reporters[Reporters<br/>Text, JSON, AI, SARIF]
     end
 
-    subgraph "Config"
-        CFG[Config Loader]
-    end
-
-    CLI --> DL & CL & GL & EL & IL & NL & SML & STL & CCL & PL & INL & OL
-    Plugin --> DL & CL & GL & EL & IL & NL & SML & STL & CCL & PL & INL & OL
-
-    DL & CL & GL & EL & IL & NL & SML & STL & CCL & PL & INL & OL --> AP
-    DL & CL & GL & EL & IL & NL & SML & STL & CCL & PL & INL & OL --> Issue & DiagTemplate & NoLint
-
-    TR & JR & AR & SR --> RP
-    TR & JR & AR & SR --> Issue & Severity & Category
-
-    CFG --> Issue
+    CLI & Plugin --> Analyzers
+    Analyzers --> AP & Core
+    Reporters --> RP & Core
 ```
 
 ### Directory Structure
