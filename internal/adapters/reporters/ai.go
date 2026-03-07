@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
 // AIIssue is the AI-optimized representation with full guidance.
@@ -21,10 +21,10 @@ type AIIssue struct {
 	Message string `json:"message"`
 
 	// AI-consumable guidance (prevents fix loops)
-	Why            string   `json:"why"`
-	Fix            string   `json:"fix"`
+	Why            string    `json:"why"`
+	Fix            string    `json:"fix"`
 	Example        AIExample `json:"example,omitempty"`
-	CommonMistakes []string `json:"common_mistakes,omitempty"`
+	CommonMistakes []string  `json:"common_mistakes,omitempty"`
 }
 
 // AIExample provides before/after code examples.

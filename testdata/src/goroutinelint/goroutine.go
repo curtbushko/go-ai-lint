@@ -158,7 +158,7 @@ func GoodGoroutineWithTimer() {
 }
 
 // Helper functions for test compilation.
-func doWork()              {}
-func process(int)          {}
-func processIndex(int)     {}
-func shouldStop() bool     { return false }
+func doWork()          {}
+func process(int)      {}
+func processIndex(int) {}
+func shouldStop() bool { return false }

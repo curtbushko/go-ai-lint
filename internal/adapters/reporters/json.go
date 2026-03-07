@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
 // JSONIssue is the JSON-serializable representation of an issue.

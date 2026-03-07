@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/curtbushko/go-ai-lint/internal/adapters/reporters"
-	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
 func TestTextReporter(t *testing.T) {

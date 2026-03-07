@@ -9,19 +9,20 @@
 package main
 
 import (
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/concurrencylint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/contextlint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/deferlint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/errorlint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/goroutinelint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/initlint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/interfacelint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/naminglint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/optionlint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/paniclint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/slicemaplint"
-	"github.com/curtbushko/go-ai-lint/internal/core/analyzers/stringlint"
 	"golang.org/x/tools/go/analysis/multichecker"
+
+	"github.com/curtbushko/go-ai-lint/internal/application/concurrencylint"
+	"github.com/curtbushko/go-ai-lint/internal/application/contextlint"
+	"github.com/curtbushko/go-ai-lint/internal/application/deferlint"
+	"github.com/curtbushko/go-ai-lint/internal/application/errorlint"
+	"github.com/curtbushko/go-ai-lint/internal/application/goroutinelint"
+	"github.com/curtbushko/go-ai-lint/internal/application/initlint"
+	"github.com/curtbushko/go-ai-lint/internal/application/interfacelint"
+	"github.com/curtbushko/go-ai-lint/internal/application/naminglint"
+	"github.com/curtbushko/go-ai-lint/internal/application/optionlint"
+	"github.com/curtbushko/go-ai-lint/internal/application/paniclint"
+	"github.com/curtbushko/go-ai-lint/internal/application/slicemaplint"
+	"github.com/curtbushko/go-ai-lint/internal/application/stringlint"
 )
 
 func main() {

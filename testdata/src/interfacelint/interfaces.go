@@ -107,6 +107,7 @@ type SuppressedLargeInterface interface { //nolint:interfacelint
 }
 
 // SuppressedValidate is suppressed with nolint on line above.
+//
 //nolint:interfacelint
 type SuppressedValidate interface {
 	Validate() error

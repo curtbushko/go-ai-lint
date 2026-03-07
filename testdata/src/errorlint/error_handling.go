@@ -125,7 +125,7 @@ func GoodErrorLogInDeferReturn() (err error) {
 }
 
 // Helper declarations for test compilation.
-func doSomething() error                  { return nil }
-func somethingWrong() bool                { return false }
+func doSomething() error   { return nil }
+func somethingWrong() bool { return false }
 
 var ErrOperationFailed = errors.New("operation failed")

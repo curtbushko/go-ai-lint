@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
 // TextReporter outputs issues in human-readable text format.

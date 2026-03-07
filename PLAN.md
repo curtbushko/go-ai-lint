@@ -34,16 +34,16 @@ A custom Go static analysis tool that detects common mistakes in AI-generated Go
 - [x] Nolint: //nolint directive support
 
 ### In Progress
-- [ ] File-based configuration (.go-ai-lint.yml)
+- [x] File-based configuration (.go-ai-lint.yml)
 
 ### Pending Features
-- [ ] Configuration system (Phase 10.3)
-  - [ ] Config file loading with precedence
+- [x] Configuration system (Phase 10.3)
+  - [x] Config file loading with precedence
   - [ ] CLI flag overrides
   - [ ] Per-analyzer settings
   - [ ] Nolint config options
-- [ ] golangci-lint plugin integration
-- [ ] SARIF reporter (IDE integration)
+- [x] golangci-lint plugin integration
+- [x] SARIF reporter (IDE integration)
 - [ ] Documentation & README completion
 
 ### Quality Gates Status

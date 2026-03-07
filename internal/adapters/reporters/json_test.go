@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/curtbushko/go-ai-lint/internal/adapters/reporters"
-	"github.com/curtbushko/go-ai-lint/internal/core/domain"
+	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
 func TestJSONReporter(t *testing.T) {
 	issues := []domain.Issue{
 		{
-			ID:       "AIL001",
+			ID:       testIssueID,
 			Name:     "defer-in-loop",
 			Category: domain.CategoryDefer,
 			Severity: domain.SeverityCritical,
@@ -44,8 +44,8 @@ func TestJSONReporter(t *testing.T) {
 	}
 
 	issue := result[0]
-	if issue.ID != "AIL001" {
-		t.Errorf("ID = %q, want AIL001", issue.ID)
+	if issue.ID != testIssueID {
+		t.Errorf("ID = %q, want %s", issue.ID, testIssueID)
 	}
 	if issue.File != "service.go" {
 		t.Errorf("File = %q, want service.go", issue.File)
