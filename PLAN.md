@@ -34,14 +34,17 @@ A custom Go static analysis tool that detects common mistakes in AI-generated Go
 - [x] Nolint: //nolint directive support
 
 ### In Progress
-- [x] File-based configuration (.go-ai-lint.yml)
+(none)
 
-### Pending Features
+### Completed Recently
+- [x] File-based configuration (.go-ai-lint.yml)
 - [x] Configuration system (Phase 10.3)
   - [x] Config file loading with precedence
-  - [ ] CLI flag overrides
-  - [ ] Per-analyzer settings
-  - [ ] Nolint config options
+  - [x] CLI flag overrides
+  - [x] Per-analyzer settings
+  - [x] Nolint config options
+
+### Pending Features
 - [x] golangci-lint plugin integration
 - [x] SARIF reporter (IDE integration)
 - [ ] Documentation & README completion
@@ -467,13 +470,13 @@ This checklist follows strict TDD: write failing test FIRST, then implement, the
 - [ ] VALIDATE: `make build && make test && make lint`
 
 **10.3.2 CLI Flag Integration**
-- [ ] Add --config flag for explicit config path
-- [ ] Add --show-config flag to display resolved config
-- [ ] Add --init flag to generate default config file
-- [ ] Add analyzer enable/disable flags (--enable, --disable)
-- [ ] Add --min-severity flag
-- [ ] Add --format flag (text, json, ai, sarif)
-- [ ] TEST: CLI flags override config file values
+- [x] Add --config flag for explicit config path
+- [x] Add --show-config flag to display resolved config
+- [x] Add --init flag to generate default config file
+- [x] Add analyzer enable/disable flags (--enable, --disable)
+- [x] Add --min-severity flag
+- [x] Add --format flag (text, json, ai, sarif)
+- [x] TEST: CLI flags override config file values
 
 **10.3.3 Nolint Integration with Config**
 - [ ] Honor nolint.enabled config setting

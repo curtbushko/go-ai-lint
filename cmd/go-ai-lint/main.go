@@ -26,15 +26,24 @@ import (
 	"github.com/curtbushko/go-ai-lint/internal/application/paniclint"
 	"github.com/curtbushko/go-ai-lint/internal/application/slicemaplint"
 	"github.com/curtbushko/go-ai-lint/internal/application/stringlint"
+	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
 func main() {
-	// Parse --config flag before delegating to multichecker
+	// Parse flags and execute immediate actions (--init, --show-config)
 	cli := NewCLI()
-	_, err := cli.ParseConfig(os.Args[1:])
+	shouldExit, err := cli.ParseAndExecute(os.Args[1:], os.Stdout)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "go-ai-lint: %v\n", err)
 		os.Exit(1)
+	}
+	if shouldExit {
+		os.Exit(0)
+	}
+
+	// Apply nolint config setting
+	if cfg := cli.Config(); cfg != nil {
+		domain.SetNolintEnabled(cfg.Nolint.Enabled)
 	}
 
 	// Replace os.Args with remaining args for multichecker

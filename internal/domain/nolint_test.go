@@ -9,6 +9,151 @@ import (
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
+func TestNolintEnabledRespectsDirectives(t *testing.T) {
+	// Given: Config has nolint.enabled: true (default)
+	domain.SetNolintEnabled(true)
+	defer domain.SetNolintEnabled(true) // Reset after test
+
+	code := `package test
+type Validate interface { //nolint:interfacelint
+	Validate() error
+}`
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("failed to parse code: %v", err)
+	}
+
+	// Find position on line 2 (the interface declaration)
+	var targetPos token.Pos
+	ast.Inspect(file, func(n ast.Node) bool {
+		if n == nil {
+			return false
+		}
+		pos := fset.Position(n.Pos())
+		if pos.Line == 2 {
+			targetPos = n.Pos()
+			return false
+		}
+		return true
+	})
+
+	// When: Check if should skip with nolint directive
+	// Then: Issue is suppressed by nolint directive
+	got := domain.ShouldSkip(fset, file.Comments, targetPos, "interfacelint")
+	if !got {
+		t.Errorf("ShouldSkip() = %v, want true when nolint is enabled", got)
+	}
+}
+
+func TestNolintDisabledIgnoresDirectives(t *testing.T) {
+	// Given: Config has nolint.enabled: false
+	domain.SetNolintEnabled(false)
+	defer domain.SetNolintEnabled(true) // Reset after test
+
+	code := `package test
+type Validate interface { //nolint:interfacelint
+	Validate() error
+}`
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("failed to parse code: %v", err)
+	}
+
+	// Find position on line 2 (the interface declaration)
+	var targetPos token.Pos
+	ast.Inspect(file, func(n ast.Node) bool {
+		if n == nil {
+			return false
+		}
+		pos := fset.Position(n.Pos())
+		if pos.Line == 2 {
+			targetPos = n.Pos()
+			return false
+		}
+		return true
+	})
+
+	// When: Check if should skip with nolint directive but nolint disabled
+	// Then: Issue is still reported (directive ignored)
+	got := domain.ShouldSkip(fset, file.Comments, targetPos, "interfacelint")
+	if got {
+		t.Errorf("ShouldSkip() = %v, want false when nolint is disabled", got)
+	}
+}
+
+func TestNolintSettingGlobal(t *testing.T) {
+	// Given: Config has nolint.enabled: false
+	domain.SetNolintEnabled(false)
+	defer domain.SetNolintEnabled(true) // Reset after test
+
+	// Test with multiple analyzer types to ensure global setting applies to all
+	testCases := []struct {
+		name         string
+		analyzerName string
+		code         string
+	}{
+		{
+			name:         "interfacelint",
+			analyzerName: "interfacelint",
+			code: `package test
+type Validate interface { //nolint:interfacelint
+	Validate() error
+}`,
+		},
+		{
+			name:         "errorlint",
+			analyzerName: "errorlint",
+			code: `package test
+func foo() error { //nolint:errorlint
+	return nil
+}`,
+		},
+		{
+			name:         "nolint all",
+			analyzerName: "deferlint",
+			code: `package test
+func foo() { //nolint
+	defer func() {}()
+}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			file, err := parser.ParseFile(fset, "test.go", tc.code, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("failed to parse code: %v", err)
+			}
+
+			// Find position on line 2
+			var targetPos token.Pos
+			ast.Inspect(file, func(n ast.Node) bool {
+				if n == nil {
+					return false
+				}
+				pos := fset.Position(n.Pos())
+				if pos.Line == 2 {
+					targetPos = n.Pos()
+					return false
+				}
+				return true
+			})
+
+			// When: Run analyzer on code with nolint directives
+			// Then: All analyzers report issues (none respect nolint)
+			got := domain.ShouldSkip(fset, file.Comments, targetPos, tc.analyzerName)
+			if got {
+				t.Errorf("ShouldSkip() = %v, want false for %s when nolint is disabled globally", got, tc.analyzerName)
+			}
+		})
+	}
+}
+
 func TestParseDirective(t *testing.T) {
 	tests := []struct {
 		name     string

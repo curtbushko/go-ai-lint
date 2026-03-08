@@ -42,4 +42,5 @@ go.work.sum
 .go-arch-lint.yml
 .go-ai-lint.yml
 
-go-ai-lint
+# Binary
+/go-ai-lint

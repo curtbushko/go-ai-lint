@@ -9,6 +9,14 @@ import (
 	"github.com/curtbushko/go-ai-lint/internal/config"
 )
 
+// Test format constants to avoid goconst lint warnings.
+const (
+	formatJSON  = "json"
+	formatText  = "text"
+	formatAI    = "ai"
+	formatSarif = "sarif"
+)
+
 func TestDefault(t *testing.T) {
 	cfg := config.Default()
 
@@ -111,8 +119,8 @@ output:
   sort-by: severity
 `,
 			check: func(t *testing.T, cfg *config.Config) {
-				if cfg.Output.Format != "json" {
-					t.Errorf("Output.Format = %q, want json", cfg.Output.Format)
+				if cfg.Output.Format != formatJSON {
+					t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
 				}
 				if cfg.Output.PrintAnalyzerName {
 					t.Error("Output.PrintAnalyzerName = true, want false")
@@ -223,8 +231,8 @@ output:
 		t.Fatalf("Load() error = %v", err)
 	}
 
-	if cfg.Output.Format != "json" {
-		t.Errorf("Output.Format = %q, want json", cfg.Output.Format)
+	if cfg.Output.Format != formatJSON {
+		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
 	}
 }
 
@@ -411,6 +419,165 @@ analyzers:
 	}
 }
 
+func TestLoadWithOverridesExplicitPath(t *testing.T) {
+	// Create a temp config file
+	tmpDir := t.TempDir()
+	explicitPath := filepath.Join(tmpDir, "explicit-config.yml")
+	configContent := `
+version: 1
+output:
+  format: sarif
+`
+	if err := os.WriteFile(explicitPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	// Load with explicit path should use that config
+	cfg, err := config.LoadWithOverrides("/some/other/dir", explicitPath)
+	if err != nil {
+		t.Fatalf("LoadWithOverrides() error = %v", err)
+	}
+	if cfg.Output.Format != "sarif" {
+		t.Errorf("Output.Format = %q, want sarif", cfg.Output.Format)
+	}
+}
+
+func TestLoadWithOverridesExplicitPathNotFound(t *testing.T) {
+	_, err := config.LoadWithOverrides("/some/dir", "/nonexistent/config.yml")
+	if err == nil {
+		t.Error("LoadWithOverrides() expected error for non-existent explicit path")
+	}
+}
+
+func TestLoadWithOverridesFallsBackToDiscovery(t *testing.T) {
+	// Create a temp directory with a config file
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, ".go-ai-lint.yml")
+	configContent := `
+version: 1
+output:
+  format: json
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	// Load with empty explicit path should use discovery
+	cfg, err := config.LoadWithOverrides(tmpDir, "")
+	if err != nil {
+		t.Fatalf("LoadWithOverrides() error = %v", err)
+	}
+	if cfg.Output.Format != formatJSON {
+		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
+	}
+}
+
+func TestToYAML(t *testing.T) {
+	tests := []struct {
+		name       string
+		yaml       string
+		wantSubstr []string
+	}{
+		{
+			name: "default config serializes to YAML",
+			yaml: `version: 1`,
+			wantSubstr: []string{
+				"version: 1",
+				"format: text",
+				"enable-all: true",
+			},
+		},
+		{
+			name: "custom config preserves values",
+			yaml: `
+version: 1
+output:
+  format: json
+severity:
+  min-severity: high
+`,
+			wantSubstr: []string{
+				"format: json",
+				"min-severity: high",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := config.LoadFromReader([]byte(tt.yaml))
+			if err != nil {
+				t.Fatalf("LoadFromReader() error = %v", err)
+			}
+
+			got, err := cfg.ToYAML()
+			if err != nil {
+				t.Fatalf("ToYAML() error = %v", err)
+			}
+
+			for _, substr := range tt.wantSubstr {
+				if !contains(got, substr) {
+					t.Errorf("ToYAML() output missing %q\nGot:\n%s", substr, got)
+				}
+			}
+		})
+	}
+}
+
+// contains checks if s contains substr.
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
+}
+
+func containsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+func TestGenerateDefaultConfig(t *testing.T) {
+	// When: Generate default config template
+	content := config.GenerateDefaultConfig()
+
+	// Then: Config contains version
+	if !contains(content, "version: 1") {
+		t.Error("GenerateDefaultConfig() missing 'version: 1'")
+	}
+
+	// Then: Config contains helpful comments
+	if !contains(content, "# go-ai-lint configuration") {
+		t.Error("GenerateDefaultConfig() missing header comment")
+	}
+
+	// Then: Config contains run section
+	if !contains(content, "run:") {
+		t.Error("GenerateDefaultConfig() missing 'run:' section")
+	}
+
+	// Then: Config contains output section
+	if !contains(content, "output:") {
+		t.Error("GenerateDefaultConfig() missing 'output:' section")
+	}
+
+	// Then: Config contains analyzers section
+	if !contains(content, "analyzers:") {
+		t.Error("GenerateDefaultConfig() missing 'analyzers:' section")
+	}
+
+	// Then: Config contains severity section
+	if !contains(content, "severity:") {
+		t.Error("GenerateDefaultConfig() missing 'severity:' section")
+	}
+
+	// Then: Config contains nolint section
+	if !contains(content, "nolint:") {
+		t.Error("GenerateDefaultConfig() missing 'nolint:' section")
+	}
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -463,5 +630,178 @@ output:
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestMergeEnableFlagAddsAnalyzer(t *testing.T) {
+	// Given: Config has enable-all: false and no analyzers enabled
+	yaml := `
+version: 1
+analyzers:
+  enable-all: false
+  enable: []
+`
+	cfg, err := config.LoadFromReader([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadFromReader() error = %v", err)
+	}
+
+	// When: Merge with --enable=deferlint,errorlint
+	overrides := config.CLIOverrides{
+		Enable: []string{"deferlint", "errorlint"},
+	}
+	cfg.Merge(overrides)
+
+	// Then: deferlint and errorlint are enabled, others disabled
+	if !cfg.IsAnalyzerEnabled("deferlint") {
+		t.Error("deferlint should be enabled after merge")
+	}
+	if !cfg.IsAnalyzerEnabled("errorlint") {
+		t.Error("errorlint should be enabled after merge")
+	}
+	if cfg.IsAnalyzerEnabled("optionlint") {
+		t.Error("optionlint should remain disabled (not in enable list)")
+	}
+}
+
+func TestMergeDisableFlagRemovesAnalyzer(t *testing.T) {
+	// Given: Config has enable-all: true
+	yaml := `
+version: 1
+analyzers:
+  enable-all: true
+`
+	cfg, err := config.LoadFromReader([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadFromReader() error = %v", err)
+	}
+
+	// When: Merge with --disable=optionlint
+	overrides := config.CLIOverrides{
+		Disable: []string{"optionlint"},
+	}
+	cfg.Merge(overrides)
+
+	// Then: optionlint is disabled, all others remain enabled
+	if cfg.IsAnalyzerEnabled("optionlint") {
+		t.Error("optionlint should be disabled after merge")
+	}
+	if !cfg.IsAnalyzerEnabled("deferlint") {
+		t.Error("deferlint should remain enabled (enable-all: true)")
+	}
+	if !cfg.IsAnalyzerEnabled("errorlint") {
+		t.Error("errorlint should remain enabled (enable-all: true)")
+	}
+}
+
+func TestMergeMinSeverityFilters(t *testing.T) {
+	// Given: Config has min-severity: low
+	yaml := `
+version: 1
+severity:
+  min-severity: low
+`
+	cfg, err := config.LoadFromReader([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadFromReader() error = %v", err)
+	}
+
+	// When: Merge with --min-severity=high
+	overrides := config.CLIOverrides{
+		MinSeverity: "high",
+	}
+	cfg.Merge(overrides)
+
+	// Then: min-severity is high
+	if cfg.Severity.MinSeverity != "high" {
+		t.Errorf("Severity.MinSeverity = %q, want high", cfg.Severity.MinSeverity)
+	}
+}
+
+func TestMergeFormatFlagChangesOutput(t *testing.T) {
+	// Given: Config has format: text
+	yaml := `
+version: 1
+output:
+  format: text
+`
+	cfg, err := config.LoadFromReader([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadFromReader() error = %v", err)
+	}
+
+	// When: Merge with --format=json
+	overrides := config.CLIOverrides{
+		Format: formatJSON,
+	}
+	cfg.Merge(overrides)
+
+	// Then: Output format is JSON
+	if cfg.Output.Format != formatJSON {
+		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
+	}
+}
+
+func TestMergeCLIFlagsOverrideConfig(t *testing.T) {
+	// Given: Config file has format: text, min-severity: low
+	yaml := `
+version: 1
+output:
+  format: text
+severity:
+  min-severity: low
+`
+	cfg, err := config.LoadFromReader([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadFromReader() error = %v", err)
+	}
+
+	// When: Merge with --format=json --min-severity=high
+	overrides := config.CLIOverrides{
+		Format:      formatJSON,
+		MinSeverity: "high",
+	}
+	cfg.Merge(overrides)
+
+	// Then: Merged config uses CLI values
+	if cfg.Output.Format != formatJSON {
+		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
+	}
+	if cfg.Severity.MinSeverity != "high" {
+		t.Errorf("Severity.MinSeverity = %q, want high", cfg.Severity.MinSeverity)
+	}
+}
+
+func TestMergeEmptyOverridesPreservesConfig(t *testing.T) {
+	// Given: Config has specific values
+	yaml := `
+version: 1
+output:
+  format: sarif
+severity:
+  min-severity: medium
+analyzers:
+  enable-all: false
+  enable:
+    - deferlint
+`
+	cfg, err := config.LoadFromReader([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadFromReader() error = %v", err)
+	}
+
+	// When: Merge with empty overrides
+	overrides := config.CLIOverrides{}
+	cfg.Merge(overrides)
+
+	// Then: Original config is preserved
+	if cfg.Output.Format != formatSarif {
+		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatSarif)
+	}
+	if cfg.Severity.MinSeverity != "medium" {
+		t.Errorf("Severity.MinSeverity = %q, want medium", cfg.Severity.MinSeverity)
+	}
+	if !cfg.IsAnalyzerEnabled("deferlint") {
+		t.Error("deferlint should remain enabled")
 	}
 }

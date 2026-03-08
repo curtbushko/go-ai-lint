@@ -7,9 +7,34 @@ import (
 	"go/ast"
 	"go/token"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 )
+
+// nolintConfig holds the global nolint configuration.
+// Access is thread-safe via sync.RWMutex.
+var (
+	nolintEnabled = true
+	nolintMu      sync.RWMutex
+)
+
+// SetNolintEnabled sets whether nolint directives are enabled globally.
+// When false, all nolint directives are ignored and issues are always reported.
+// This function is thread-safe.
+func SetNolintEnabled(enabled bool) {
+	nolintMu.Lock()
+	defer nolintMu.Unlock()
+	nolintEnabled = enabled
+}
+
+// IsNolintEnabled returns whether nolint directives are enabled.
+// This function is thread-safe.
+func IsNolintEnabled() bool {
+	nolintMu.RLock()
+	defer nolintMu.RUnlock()
+	return nolintEnabled
+}
 
 // ParseDirective parses a nolint comment and returns whether it applies to all
 // analyzers or a specific list of analyzers.
@@ -70,7 +95,14 @@ func ParseDirective(comment string) (all bool, analyzers []string) {
 
 // ShouldSkip checks if a diagnostic at the given position should be skipped
 // due to a nolint directive. It checks comments on the same line and the line above.
+// If nolint directives are globally disabled via SetNolintEnabled(false),
+// this function always returns false (never skips).
 func ShouldSkip(fset *token.FileSet, comments []*ast.CommentGroup, pos token.Pos, analyzerName string) bool {
+	// If nolint is globally disabled, never skip any issues
+	if !IsNolintEnabled() {
+		return false
+	}
+
 	position := fset.Position(pos)
 	targetLine := position.Line
 
