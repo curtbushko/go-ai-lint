@@ -805,3 +805,69 @@ analyzers:
 		t.Error("deferlint should remain enabled")
 	}
 }
+
+func TestExampleConfigParseable(t *testing.T) {
+	// Given: The example config file exists in the repo root
+	// This test validates that .go-ai-lint.yml.example is valid YAML
+	// and can be parsed by the config loader.
+
+	// Find the example config relative to this test file
+	// Walk up to find the repo root where .go-ai-lint.yml.example lives
+	exampleConfigPath := findExampleConfig(t)
+
+	// When: Load the example config
+	cfg, err := config.LoadFromPath(exampleConfigPath)
+
+	// Then: No parse errors
+	if err != nil {
+		t.Fatalf("LoadFromPath(%s) error = %v", exampleConfigPath, err)
+	}
+
+	// Then: Config validates successfully
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+
+	// Then: Config has expected structure
+	if cfg.Version != 1 {
+		t.Errorf("Version = %d, want 1", cfg.Version)
+	}
+
+	// Then: Output format is valid
+	if cfg.Output.Format == "" {
+		t.Error("Output.Format should not be empty")
+	}
+
+	// Then: Severity is valid
+	if cfg.Severity.MinSeverity == "" {
+		t.Error("Severity.MinSeverity should not be empty")
+	}
+}
+
+// findExampleConfig walks up directories to find .go-ai-lint.yml.example.
+func findExampleConfig(t *testing.T) string {
+	t.Helper()
+
+	// Get the directory of this test file
+	// Start from the current working directory during test execution
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+
+	// Walk up to find the example config
+	dir := cwd
+	for {
+		examplePath := filepath.Join(dir, ".go-ai-lint.yml.example")
+		if _, err := os.Stat(examplePath); err == nil {
+			return examplePath
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached root
+			t.Fatalf("could not find .go-ai-lint.yml.example starting from %s", cwd)
+		}
+		dir = parent
+	}
+}

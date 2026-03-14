@@ -328,3 +328,171 @@ type Validate interface { //nolint:errorlint,interfacelint,paniclint
 		})
 	}
 }
+
+func TestRequireSpecificDisabledAllowsBare(t *testing.T) {
+	// Given: Config has nolint.require-specific: false (default)
+	domain.SetNolintEnabled(true)
+	domain.SetRequireSpecific(false)
+	defer func() {
+		domain.SetNolintEnabled(true)
+		domain.SetRequireSpecific(false)
+	}()
+
+	code := `package test
+func foo() { //nolint
+	defer func() {}()
+}`
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("failed to parse code: %v", err)
+	}
+
+	// Find position on line 2
+	var targetPos token.Pos
+	ast.Inspect(file, func(n ast.Node) bool {
+		if n == nil {
+			return false
+		}
+		pos := fset.Position(n.Pos())
+		if pos.Line == 2 {
+			targetPos = n.Pos()
+			return false
+		}
+		return true
+	})
+
+	// When: Analyze code with bare //nolint comment
+	// Then: Issue is suppressed
+	got := domain.ShouldSkip(fset, file.Comments, targetPos, "deferlint")
+	if !got {
+		t.Errorf("ShouldSkip() = %v, want true when require-specific is false", got)
+	}
+}
+
+func TestRequireSpecificRejectsBare(t *testing.T) {
+	// Given: Config has nolint.require-specific: true
+	domain.SetNolintEnabled(true)
+	domain.SetRequireSpecific(true)
+	defer func() {
+		domain.SetNolintEnabled(true)
+		domain.SetRequireSpecific(false)
+	}()
+
+	code := `package test
+func foo() { //nolint
+	defer func() {}()
+}`
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("failed to parse code: %v", err)
+	}
+
+	// Find position on line 2
+	var targetPos token.Pos
+	ast.Inspect(file, func(n ast.Node) bool {
+		if n == nil {
+			return false
+		}
+		pos := fset.Position(n.Pos())
+		if pos.Line == 2 {
+			targetPos = n.Pos()
+			return false
+		}
+		return true
+	})
+
+	// When: Analyze code with bare //nolint comment (no analyzer name)
+	// Then: Issue is NOT suppressed (bare nolint ignored)
+	got := domain.ShouldSkip(fset, file.Comments, targetPos, "deferlint")
+	if got {
+		t.Errorf("ShouldSkip() = %v, want false when require-specific is true and bare //nolint used", got)
+	}
+}
+
+func TestRequireSpecificAllowsSpecific(t *testing.T) {
+	// Given: Config has nolint.require-specific: true
+	domain.SetNolintEnabled(true)
+	domain.SetRequireSpecific(true)
+	defer func() {
+		domain.SetNolintEnabled(true)
+		domain.SetRequireSpecific(false)
+	}()
+
+	code := `package test
+func foo() { //nolint:deferlint
+	defer func() {}()
+}`
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("failed to parse code: %v", err)
+	}
+
+	// Find position on line 2
+	var targetPos token.Pos
+	ast.Inspect(file, func(n ast.Node) bool {
+		if n == nil {
+			return false
+		}
+		pos := fset.Position(n.Pos())
+		if pos.Line == 2 {
+			targetPos = n.Pos()
+			return false
+		}
+		return true
+	})
+
+	// When: Analyze code with //nolint:deferlint comment
+	// Then: Issue is suppressed (specific nolint honored)
+	got := domain.ShouldSkip(fset, file.Comments, targetPos, "deferlint")
+	if !got {
+		t.Errorf("ShouldSkip() = %v, want true when require-specific is true and specific analyzer named", got)
+	}
+}
+
+func TestRequireSpecificWrongAnalyzer(t *testing.T) {
+	// Given: Config has nolint.require-specific: true
+	domain.SetNolintEnabled(true)
+	domain.SetRequireSpecific(true)
+	defer func() {
+		domain.SetNolintEnabled(true)
+		domain.SetRequireSpecific(false)
+	}()
+
+	code := `package test
+func foo() { //nolint:errorlint
+	defer func() {}()
+}`
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("failed to parse code: %v", err)
+	}
+
+	// Find position on line 2
+	var targetPos token.Pos
+	ast.Inspect(file, func(n ast.Node) bool {
+		if n == nil {
+			return false
+		}
+		pos := fset.Position(n.Pos())
+		if pos.Line == 2 {
+			targetPos = n.Pos()
+			return false
+		}
+		return true
+	})
+
+	// When: Analyze deferlint issue with //nolint:errorlint comment
+	// Then: Issue is NOT suppressed (wrong analyzer)
+	got := domain.ShouldSkip(fset, file.Comments, targetPos, "deferlint")
+	if got {
+		t.Errorf("ShouldSkip() = %v, want false when nolint specifies wrong analyzer", got)
+	}
+}

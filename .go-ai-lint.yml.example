@@ -1,36 +1,119 @@
-# Example go-ai-lint configuration
-# Copy to .go-ai-lint.yml to use
+# go-ai-lint configuration
+# https://github.com/curtbushko/go-ai-lint
+#
+# Copy this file to .go-ai-lint.yml to use.
 #
 # Config file search order:
 # 1. Explicit path via --config flag
 # 2. .go-ai-lint.yml in current directory
 # 3. .go-ai-lint.yml in parent directories (up to root)
 # 4. Built-in defaults
+#
+# CLI flags override config file values.
+# Run `go-ai-lint --show-config` to see resolved configuration.
 
 version: 1
 
+# Runtime settings
 run:
+  # Maximum time to wait for analysis to complete
+  # Format: "5m", "30s", "1h30m", etc.
   timeout: 5m
-  concurrency: 0  # auto (uses CPU count)
-  skip-dirs: []
-  skip-files: []
 
+  # Number of concurrent analyzers
+  # 0 = auto (uses runtime.NumCPU)
+  concurrency: 0
+
+  # Directories to skip during analysis
+  # Supports glob patterns
+  skip-dirs:
+    # - vendor
+    # - testdata
+    # - "**/generated"
+
+  # File patterns to skip during analysis
+  # Supports glob patterns
+  skip-files:
+    # - "*_mock.go"
+    # - "*_generated.go"
+    # - "*.pb.go"
+
+# Output settings
 output:
-  format: text  # text, json, ai, sarif
+  # Output format for diagnostics
+  # Options: text, json, ai, sarif
+  #
+  # - text:  Human-readable output (default)
+  # - json:  JSON output for programmatic processing
+  # - ai:    AI-friendly rich output with fix guidance
+  # - sarif: SARIF format for IDE integration
+  format: text
+
+  # Include analyzer name in output
   print-analyzer-name: true
+
+  # Sort results by: file, severity
   sort-by: file
 
+# Nolint directive settings
 nolint:
+  # Enable processing of //nolint directives
+  # When false, //nolint comments are ignored
   enabled: true
+
+  # Require specific analyzer name in //nolint directive
+  # When true:
+  #   //nolint:deferlint    - valid, suppresses deferlint
+  #   //nolint              - invalid, bare nolint ignored
+  # When false:
+  #   //nolint              - valid, suppresses all analyzers
+  #   //nolint:deferlint    - valid, suppresses deferlint
   require-specific: false
 
+# Analyzer settings
 analyzers:
+  # Enable all analyzers by default
+  # When true, all analyzers run unless in 'disable' list
+  # When false, only analyzers in 'enable' list run
   enable-all: true
-  # Uncomment to disable specific analyzers:
-  # disable:
+
+  # Explicitly enable specific analyzers (when enable-all is false)
+  # Available analyzers:
+  #   - deferlint       (AIL001-009): Defer mistakes
+  #   - contextlint     (AIL010-019): Context misuse
+  #   - goroutinelint   (AIL020-029): Goroutine lifecycle
+  #   - errorlint       (AIL030-039): Error handling
+  #   - interfacelint   (AIL040-049): Interface design
+  #   - naminglint      (AIL050-059): Naming conventions
+  #   - slicemaplint    (AIL060-069): Slice/map pitfalls
+  #   - stringlint      (AIL070-079): String handling
+  #   - concurrencylint (AIL080-089): Concurrency issues
+  #   - paniclint       (AIL090-099): Panic/recover misuse
+  #   - initlint        (AIL100-109): Init function issues
+  #   - optionlint      (AIL110-119): Functional options
+  # enable:
   #   - deferlint
   #   - errorlint
+  #   - concurrencylint
 
+  # Disable specific analyzers
+  # Takes precedence over enable-all and enable
+  disable: []
+    # - optionlint      # If you don't use functional options pattern
+    # - stringlint      # If string performance isn't a concern
+
+# Severity settings
 severity:
-  min-severity: low  # low, medium, high, critical
-  error-on: []       # e.g., [high, critical] to fail CI on these
+  # Minimum severity to report
+  # Options: critical, high, medium, low
+  #
+  # Issues below this severity are not reported
+  # Example: "high" reports only high and critical issues
+  min-severity: low
+
+  # Severities that cause non-zero exit code
+  # Useful for CI to fail on certain severity levels
+  # Leave empty to always exit 0 (unless analysis error)
+  error-on: []
+    # - critical
+    # - high

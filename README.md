@@ -189,6 +189,124 @@ type LargeInterface interface {
 func GetValue() int { return 42 }
 ```
 
+## Configuration
+
+go-ai-lint supports configuration via YAML files and CLI flags. CLI flags take precedence over config file values.
+
+### CLI Flags
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--config` | Path to configuration file | `--config=/path/to/.go-ai-lint.yml` |
+| `--show-config` | Display resolved configuration and exit | `--show-config` |
+| `--init` | Generate default config file in current directory | `--init` |
+| `--force` | Overwrite existing config when using --init | `--init --force` |
+| `--dir` | Directory for --init (defaults to current directory) | `--init --dir=/path/to/project` |
+| `--enable` | Comma-separated list of analyzers to enable | `--enable=deferlint,errorlint` |
+| `--disable` | Comma-separated list of analyzers to disable | `--disable=optionlint,stringlint` |
+| `--min-severity` | Minimum severity to report (low, medium, high, critical) | `--min-severity=high` |
+| `--format` | Output format (text, json, ai, sarif) | `--format=json` |
+
+### Config File Search Precedence
+
+go-ai-lint searches for configuration in the following order:
+
+1. **Explicit path**: `--config` flag (error if file not found)
+2. **Current directory**: `.go-ai-lint.yml` in the working directory
+3. **Parent directories**: Walks up to find `.go-ai-lint.yml` in parent directories
+4. **Built-in defaults**: Uses sensible defaults if no config file found
+
+### Creating a Config File
+
+Generate a default configuration file:
+
+```bash
+# Create .go-ai-lint.yml in current directory
+go-ai-lint --init
+
+# Create in a specific directory
+go-ai-lint --init --dir=/path/to/project
+
+# Overwrite existing config
+go-ai-lint --init --force
+```
+
+### Configuration Options
+
+```yaml
+# .go-ai-lint.yml
+version: 1
+
+# Runtime settings
+run:
+  timeout: 5m              # Maximum analysis time
+  concurrency: 0           # 0 = auto (uses runtime.NumCPU)
+  skip-dirs:               # Directories to skip
+    - vendor
+    - testdata
+  skip-files:              # File patterns to skip
+    - "*_mock.go"
+
+# Output settings
+output:
+  format: text             # text, json, ai, sarif
+  print-analyzer-name: true
+  sort-by: file            # file, severity
+
+# Nolint directive settings
+nolint:
+  enabled: true            # Process //nolint directives
+  require-specific: false  # Require analyzer name in //nolint
+
+# Analyzer settings
+analyzers:
+  enable-all: true         # Enable all analyzers by default
+  enable: []               # Explicitly enable (when enable-all is false)
+  disable:                 # Disable specific analyzers
+    - optionlint
+
+# Severity settings
+severity:
+  min-severity: low        # low, medium, high, critical
+  error-on:                # Severities that cause non-zero exit
+    - critical
+    - high
+```
+
+### Nolint Configuration
+
+The `nolint` section controls how `//nolint` directives are processed:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | bool | `true` | Enable/disable processing of `//nolint` directives |
+| `require-specific` | bool | `false` | Require analyzer name in `//nolint` (e.g., `//nolint:deferlint`) |
+
+When `require-specific` is `true`, bare `//nolint` comments without analyzer names will be ignored.
+
+### Viewing Resolved Configuration
+
+Display the effective configuration after merging config file and CLI flags:
+
+```bash
+go-ai-lint --show-config
+```
+
+Example output:
+
+```yaml
+# Source: /path/to/project/.go-ai-lint.yml
+version: 1
+run:
+  timeout: 5m0s
+  concurrency: 0
+output:
+  format: text
+  print-analyzer-name: true
+  sort-by: file
+...
+```
+
 ## Using with golangci-lint
 
 ### Method 1: Module Plugin (Recommended)

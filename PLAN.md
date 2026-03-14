@@ -47,6 +47,9 @@ A custom Go static analysis tool that detects common mistakes in AI-generated Go
 ### Pending Features
 - [x] golangci-lint plugin integration
 - [x] SARIF reporter (IDE integration)
+- [ ] Phase 14: cmdlint (AIL120-AIL122)
+- [ ] Phase 15: testlint (AIL130-AIL132) - with Kubernetes e2e exception
+- [ ] Phase 16: iolint (AIL140-AIL142)
 - [ ] Documentation & README completion
 
 ### Quality Gates Status
@@ -479,15 +482,15 @@ This checklist follows strict TDD: write failing test FIRST, then implement, the
 - [x] TEST: CLI flags override config file values
 
 **10.3.3 Nolint Integration with Config**
-- [ ] Honor nolint.enabled config setting
-- [ ] Implement nolint.require-specific option
-- [ ] TEST: nolint disabled via config still reports all issues
-- [ ] TEST: require-specific rejects bare //nolint comments
+- [x] Honor nolint.enabled config setting
+- [x] Implement nolint.require-specific option
+- [x] TEST: nolint disabled via config still reports all issues
+- [x] TEST: require-specific rejects bare //nolint comments
 
 **10.3.4 Documentation**
-- [ ] Document all configuration options in README
-- [ ] Add example .go-ai-lint.yml to repo root
-- [ ] Document config file search precedence
+- [x] Document all configuration options in README
+- [x] Add example .go-ai-lint.yml to repo root
+- [x] Document config file search precedence
 
 ---
 
@@ -509,6 +512,207 @@ This checklist follows strict TDD: write failing test FIRST, then implement, the
 - [ ] Tag v1.0.0
 - [ ] Create GitHub release
 - [ ] Publish to pkg.go.dev
+
+### Phase 12: cmdlint Analyzer (Sprint 9)
+
+#### 12.1 AIL120: missing-cobra
+
+**12.1.1 Create Test Data**
+- [ ] Create `testdata/src/cmdlint/missing_cobra.go` with:
+  - Bad case: cmd/main.go without cobra import `// want "AIL120"`
+  - Good case: cmd/main.go with cobra import (no want comment)
+  - Edge case: non-cmd main.go (should not trigger)
+
+**12.1.2 Write Failing Test**
+- [ ] TEST (RED): Write `internal/core/analyzers/cmdlint/analyzer_test.go`
+  - Use analysistest.Run with testdata
+  - Test analyzer name is "cmdlint"
+- [ ] RUN: `go test ./internal/core/analyzers/cmdlint/...` - confirm FAILS
+
+**12.1.3 Implement Analyzer**
+- [ ] IMPLEMENT (GREEN): Write `internal/core/analyzers/cmdlint/analyzer.go`
+  - Check if file path matches cmd/**/main.go
+  - Look for import "github.com/spf13/cobra"
+  - Report AIL120 if missing
+- [ ] RUN: `go test ./internal/core/analyzers/cmdlint/...` - confirm PASSES
+
+**12.1.4 Validate**
+- [ ] `make build && make test && make lint && make arch-check`
+
+#### 12.2 AIL121: missing-viper
+
+**12.2.1 Create Test Data**
+- [ ] Create `testdata/src/cmdlint/missing_viper.go` with:
+  - Bad case: cmd/*.go with flags but no viper `// want "AIL121"`
+  - Good case: cmd/*.go with viper import
+  - Edge case: cmd/*.go without flags (should not trigger)
+
+**12.2.2 Write Failing Test**
+- [ ] TEST (RED): Add test cases to `analyzer_test.go` for AIL121
+- [ ] RUN: confirm FAILS
+
+**12.2.3 Implement Detection**
+- [ ] IMPLEMENT (GREEN): Add AIL121 detection
+- [ ] RUN: confirm PASSES
+
+**12.2.4 Validate**
+- [ ] Full validation suite
+
+#### 12.3 AIL122: cobra-init-in-main
+
+**12.3.1 Create Test Data**
+- [ ] Create `testdata/src/cmdlint/cobra_init_main.go` with:
+  - Bad case: main.go with &cobra.Command{} `// want "AIL122"`
+  - Good case: root.go with cobra.Command (no want)
+  - Good case: main.go that only calls Execute()
+
+**12.3.2 Write Failing Test**
+- [ ] TEST (RED): Add test cases for AIL122
+- [ ] RUN: confirm FAILS
+
+**12.3.3 Implement Detection**
+- [ ] IMPLEMENT (GREEN): Add AIL122 detection
+- [ ] RUN: confirm PASSES
+
+**12.3.4 Validate**
+- [ ] Full validation suite
+
+### Phase 13: testlint Analyzer (Sprint 9)
+
+#### 13.1 AIL130: missing-testify
+
+**13.1.1 Create Test Data**
+- [ ] Create `testdata/src/testlint/missing_testify.go` with:
+  - Bad case: *_test.go without testify import `// want "AIL130"`
+  - Good case: *_test.go with testify/assert import
+  - Good case: *_test.go with testify/require import
+  - EXCEPTION case: file importing k8s.io/kubernetes/test/e2e/framework (no want)
+  - EXCEPTION case: file importing sigs.k8s.io/e2e-framework (no want)
+
+**13.1.2 Write Failing Test**
+- [ ] TEST (RED): Write `internal/core/analyzers/testlint/analyzer_test.go`
+  - Use analysistest.Run with testdata
+  - Test analyzer name is "testlint"
+  - Test k8s e2e exception works
+- [ ] RUN: `go test ./internal/core/analyzers/testlint/...` - confirm FAILS
+
+**13.1.3 Implement Analyzer**
+- [ ] IMPLEMENT (GREEN): Write `internal/core/analyzers/testlint/analyzer.go`
+  - Check if file is *_test.go
+  - Implement isKubernetesE2E() exception check
+  - Look for testify import
+  - Report AIL130 if missing (and not k8s e2e)
+- [ ] RUN: `go test ./internal/core/analyzers/testlint/...` - confirm PASSES
+
+**13.1.4 Validate**
+- [ ] `make build && make test && make lint && make arch-check`
+
+#### 13.2 AIL131: raw-t-fail
+
+**13.2.1 Create Test Data**
+- [ ] Create `testdata/src/testlint/raw_t_fail.go` with:
+  - Bad case: t.Errorf("...") `// want "AIL131"`
+  - Bad case: t.Fatalf("...") `// want "AIL131"`
+  - Good case: assert.Equal(t, ...)
+  - Good case: require.NoError(t, ...)
+  - EXCEPTION case: file importing k8s e2e framework with t.Errorf (no want)
+
+**13.2.2 Write Failing Test**
+- [ ] TEST (RED): Add test cases for AIL131
+- [ ] RUN: confirm FAILS
+
+**13.2.3 Implement Detection**
+- [ ] IMPLEMENT (GREEN): Add AIL131 detection
+  - Find CallExpr with t.Errorf, t.Fatalf, t.Error, t.Fatal
+  - Skip if isKubernetesE2E()
+- [ ] RUN: confirm PASSES
+
+**13.2.4 Validate**
+- [ ] Full validation suite
+
+#### 13.3 AIL132: missing-require-for-setup
+
+**13.3.1 Create Test Data**
+- [ ] Create `testdata/src/testlint/missing_require.go` with:
+  - Bad case: assert.NoError on setup `// want "AIL132"`
+  - Bad case: assert.NotNil on required object `// want "AIL132"`
+  - Good case: require.NoError on setup
+  - Good case: assert.Equal for non-critical checks
+
+**13.3.2 Write Failing Test**
+- [ ] TEST (RED): Add test cases for AIL132
+- [ ] RUN: confirm FAILS
+
+**13.3.3 Implement Detection**
+- [ ] IMPLEMENT (GREEN): Add AIL132 detection
+  - Detect assert.NoError, assert.NotNil early in test function
+  - Suggest require.* for setup errors
+- [ ] RUN: confirm PASSES
+
+**13.3.4 Validate**
+- [ ] Full validation suite
+
+### Phase 14: iolint Analyzer (Sprint 10)
+
+#### 14.1 AIL140: concrete-file-param
+
+**14.1.1 Create Test Data**
+- [ ] Create `testdata/src/iolint/concrete_file.go` with:
+  - Bad case: func Process(f *os.File) `// want "AIL140"`
+  - Good case: func Process(r io.Reader)
+  - Edge case: func using File-specific methods like Stat() (no want)
+
+**14.1.2 Write Failing Test**
+- [ ] TEST (RED): Write `internal/core/analyzers/iolint/analyzer_test.go`
+- [ ] RUN: confirm FAILS
+
+**14.1.3 Implement Analyzer**
+- [ ] IMPLEMENT (GREEN): Write `internal/core/analyzers/iolint/analyzer.go`
+  - Find FuncDecl with *os.File parameter
+  - Analyze function body for File-specific methods
+  - Report AIL140 if only interface methods used
+- [ ] RUN: confirm PASSES
+
+**14.1.4 Validate**
+- [ ] `make build && make test && make lint && make arch-check`
+
+#### 14.2 AIL141: concrete-buffer-param
+
+**14.2.1 Create Test Data**
+- [ ] Create `testdata/src/iolint/concrete_buffer.go` with:
+  - Bad case: func Process(buf *bytes.Buffer) only using Read/Write `// want "AIL141"`
+  - Good case: func Process(r io.Reader)
+  - Edge case: func using Bytes() method (no want - Buffer-specific)
+
+**14.2.2 Write Failing Test**
+- [ ] TEST (RED): Add test cases for AIL141
+- [ ] RUN: confirm FAILS
+
+**14.2.3 Implement Detection**
+- [ ] IMPLEMENT (GREEN): Add AIL141 detection
+- [ ] RUN: confirm PASSES
+
+**14.2.4 Validate**
+- [ ] Full validation suite
+
+#### 14.3 AIL142: concrete-response-param
+
+**14.3.1 Create Test Data**
+- [ ] Create `testdata/src/iolint/concrete_response.go` with:
+  - Bad case: func Process(resp *http.Response) only using resp.Body `// want "AIL142"`
+  - Good case: func Process(body io.ReadCloser)
+  - Edge case: func using resp.StatusCode (no want - needs full Response)
+
+**14.3.2 Write Failing Test**
+- [ ] TEST (RED): Add test cases for AIL142
+- [ ] RUN: confirm FAILS
+
+**14.3.3 Implement Detection**
+- [ ] IMPLEMENT (GREEN): Add AIL142 detection
+- [ ] RUN: confirm PASSES
+
+**14.3.4 Validate**
+- [ ] Full validation suite
 
 ---
 
@@ -534,6 +738,9 @@ AI code generators consistently produce Go code with predictable mistakes:
 | String concat in loop | Medium | gocritic | **Primary** |
 | Init with side effects | Medium | None | **Primary** |
 | Missing comma-ok on map | Medium | Partial | Secondary |
+| Missing Cobra/Viper in cmd/ | High | None | **Primary** |
+| Tests not using testify | Medium | None | **Primary** |
+| Concrete types instead of io.Reader/Writer | Medium | None | **Primary** |
 
 ---
 
@@ -592,7 +799,16 @@ go-ai-lint/
 │   │       ├── initlint/         # Init function analyzer
 │   │       │   ├── analyzer.go
 │   │       │   └── analyzer_test.go
-│   │       └── optionlint/       # Functional options analyzer
+│   │       ├── optionlint/       # Functional options analyzer
+│   │       │   ├── analyzer.go
+│   │       │   └── analyzer_test.go
+│   │       ├── cmdlint/          # CLI entry point analyzer
+│   │       │   ├── analyzer.go
+│   │       │   └── analyzer_test.go
+│   │       ├── testlint/         # Test framework analyzer
+│   │       │   ├── analyzer.go
+│   │       │   └── analyzer_test.go
+│   │       └── iolint/           # io.Reader/Writer analyzer
 │   │           ├── analyzer.go
 │   │           └── analyzer_test.go
 │   │
@@ -626,7 +842,10 @@ go-ai-lint/
 │       ├── concurrencylint/
 │       ├── paniclint/
 │       ├── initlint/
-│       └── optionlint/
+│       ├── optionlint/
+│       ├── cmdlint/
+│       ├── testlint/
+│       └── iolint/
 │
 ├── .golangci.yml                 # Our own linting config
 ├── .go-arch-lint.yml             # Architecture enforcement
@@ -674,6 +893,12 @@ components:
     in: core/analyzers/initlint/**
   optionlint:
     in: core/analyzers/optionlint/**
+  cmdlint:
+    in: core/analyzers/cmdlint/**
+  testlint:
+    in: core/analyzers/testlint/**
+  iolint:
+    in: core/analyzers/iolint/**
   adapters:
     in: adapters/**
   config:
@@ -1377,6 +1602,115 @@ AIL111: option-modifies-struct
 ├── Check if it modifies exported struct fields directly
 ├── Report - options should modify config, not final struct
 └── Suggest: use internal config struct
+```
+
+### 13. cmdlint - CLI Entry Point Analyzer
+
+**ID Prefix**: AIL120-AIL129
+
+| ID | Name | Severity | Description |
+|----|------|----------|-------------|
+| AIL120 | missing-cobra | High | cmd/ main.go doesn't use spf13/cobra |
+| AIL121 | missing-viper | High | cmd/ doesn't use spf13/viper for configuration |
+| AIL122 | cobra-init-in-main | Medium | Cobra initialization should be in root.go, not main.go |
+
+**Detection Logic**:
+
+```
+AIL120: missing-cobra
+├── Check if file path matches cmd/**/main.go
+├── Look for import "github.com/spf13/cobra"
+├── If missing, report AIL120
+└── Suggest: use cobra.Command for CLI structure
+
+AIL121: missing-viper
+├── Check if file path matches cmd/**/*.go
+├── Look for import "github.com/spf13/viper" OR flag binding
+├── If no viper AND uses flags, report AIL121
+└── Suggest: use viper for configuration management
+
+AIL122: cobra-init-in-main
+├── Check if file is cmd/**/main.go
+├── Look for &cobra.Command{} or cobra.Command{} initialization
+├── If found in main.go (not root.go), report AIL122
+└── Suggest: move cobra.Command to root.go, keep main.go minimal
+```
+
+### 14. testlint - Test Framework Analyzer
+
+**ID Prefix**: AIL130-AIL139
+
+| ID | Name | Severity | Description |
+|----|------|----------|-------------|
+| AIL130 | missing-testify | Medium | Test file doesn't use testify/assert or testify/require |
+| AIL131 | raw-t-fail | Medium | Uses t.Errorf/t.Fatalf instead of testify assertions |
+| AIL132 | missing-require-for-setup | High | Setup error uses assert instead of require |
+
+**Detection Logic**:
+
+```
+AIL130: missing-testify
+├── Check if file is *_test.go
+├── EXCEPTION: Skip if file imports k8s e2e framework
+├── Look for import "github.com/stretchr/testify/assert" or "testify/require"
+├── If missing testify AND has test functions, report AIL130
+└── Suggest: use testify/assert and testify/require for assertions
+
+AIL131: raw-t-fail
+├── Check if file is *_test.go
+├── EXCEPTION: Skip if file imports k8s e2e framework
+├── Find calls to t.Errorf, t.Fatalf, t.Error, t.Fatal
+├── Report AIL131 for each raw testing.T assertion
+└── Suggest: use assert.Equal, require.NoError, etc.
+
+AIL132: missing-require-for-setup
+├── Check if file is *_test.go
+├── EXCEPTION: Skip if file imports k8s e2e framework
+├── Find assert.* calls where error would invalidate rest of test
+├── Common patterns: assert.NoError on setup, assert.NotNil on required objects
+├── Report AIL132 when assert is used where require is needed
+└── Suggest: use require.* for setup errors that should stop the test
+```
+
+**Kubernetes e2e Exception Logic**:
+
+```
+isKubernetesE2E(file):
+├── Check if file imports "k8s.io/kubernetes/test/e2e/framework"
+├── OR imports "sigs.k8s.io/e2e-framework"
+└── If framework import found, skip testlint checks for this file
+```
+
+### 15. iolint - io.Reader/io.Writer Analyzer
+
+**ID Prefix**: AIL140-AIL149
+
+| ID | Name | Severity | Description |
+|----|------|----------|-------------|
+| AIL140 | concrete-file-param | Medium | Function accepts *os.File instead of io.Reader/io.Writer |
+| AIL141 | concrete-buffer-param | Medium | Function accepts *bytes.Buffer instead of io.Reader/io.Writer |
+| AIL142 | concrete-response-param | Medium | Function accepts *http.Response instead of io.ReadCloser |
+
+**Detection Logic**:
+
+```
+AIL140: concrete-file-param
+├── Find FuncDecl with parameter of type *os.File
+├── Check if function only uses Read/Write/Close methods
+├── If only interface methods used, report AIL140
+└── Suggest: accept io.Reader, io.Writer, or io.ReadCloser instead
+
+AIL141: concrete-buffer-param
+├── Find FuncDecl with parameter of type *bytes.Buffer
+├── Check if function only uses Read/Write methods (not Buffer-specific like Bytes())
+├── If only interface methods used, report AIL141
+└── Suggest: accept io.Reader or io.Writer instead
+
+AIL142: concrete-response-param
+├── Find FuncDecl with parameter of type *http.Response
+├── Check if function only uses resp.Body (io.ReadCloser)
+├── If only body access, report AIL142
+└── Suggest: accept io.ReadCloser instead of full response
 ```
 
 ---
@@ -2263,8 +2597,8 @@ jobs:
 
 ### v1.0.0 Release Criteria
 
-- [ ] All 12 analyzer categories implemented
-- [ ] At least 30 specific checks across categories
+- [ ] All 15 analyzer categories implemented
+- [ ] At least 53 specific checks across categories
 - [ ] Zero false positives on Go standard library
 - [ ] < 5% false positive rate on real-world repos
 - [ ] golangci-lint plugin working
@@ -2287,7 +2621,10 @@ jobs:
 | paniclint | AIL090-099 | 3 | Sprint 7 |
 | initlint | AIL100-109 | 3 | Sprint 7 |
 | optionlint | AIL110-119 | 2 | Sprint 8 |
-| **Total** | | **44** | |
+| cmdlint | AIL120-129 | 3 | Sprint 9 |
+| testlint | AIL130-139 | 3 | Sprint 9 |
+| iolint | AIL140-149 | 3 | Sprint 10 |
+| **Total** | | **53** | |
 
 ### Quality Gates (Per PR)
 

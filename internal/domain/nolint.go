@@ -15,8 +15,9 @@ import (
 // nolintConfig holds the global nolint configuration.
 // Access is thread-safe via sync.RWMutex.
 var (
-	nolintEnabled = true
-	nolintMu      sync.RWMutex
+	nolintEnabled   = true
+	requireSpecific = false
+	nolintMu        sync.RWMutex
 )
 
 // SetNolintEnabled sets whether nolint directives are enabled globally.
@@ -34,6 +35,24 @@ func IsNolintEnabled() bool {
 	nolintMu.RLock()
 	defer nolintMu.RUnlock()
 	return nolintEnabled
+}
+
+// SetRequireSpecific sets whether nolint directives require a specific analyzer name.
+// When true, bare //nolint comments (without :analyzer) are ignored.
+// When false (default), bare //nolint comments suppress all issues on that line.
+// This function is thread-safe.
+func SetRequireSpecific(required bool) {
+	nolintMu.Lock()
+	defer nolintMu.Unlock()
+	requireSpecific = required
+}
+
+// IsRequireSpecific returns whether nolint directives require a specific analyzer name.
+// This function is thread-safe.
+func IsRequireSpecific() bool {
+	nolintMu.RLock()
+	defer nolintMu.RUnlock()
+	return requireSpecific
 }
 
 // ParseDirective parses a nolint comment and returns whether it applies to all
@@ -97,6 +116,8 @@ func ParseDirective(comment string) (all bool, analyzers []string) {
 // due to a nolint directive. It checks comments on the same line and the line above.
 // If nolint directives are globally disabled via SetNolintEnabled(false),
 // this function always returns false (never skips).
+// If require-specific is enabled via SetRequireSpecific(true), bare //nolint
+// comments (without analyzer names) are ignored.
 func ShouldSkip(fset *token.FileSet, comments []*ast.CommentGroup, pos token.Pos, analyzerName string) bool {
 	// If nolint is globally disabled, never skip any issues
 	if !IsNolintEnabled() {
@@ -105,6 +126,7 @@ func ShouldSkip(fset *token.FileSet, comments []*ast.CommentGroup, pos token.Pos
 
 	position := fset.Position(pos)
 	targetLine := position.Line
+	requiresSpecific := IsRequireSpecific()
 
 	for _, cg := range comments {
 		for _, c := range cg.List {
@@ -118,6 +140,10 @@ func ShouldSkip(fset *token.FileSet, comments []*ast.CommentGroup, pos token.Pos
 
 			all, analyzers := ParseDirective(c.Text)
 			if all {
+				// If require-specific is enabled, ignore bare //nolint directives
+				if requiresSpecific {
+					continue
+				}
 				return true
 			}
 
