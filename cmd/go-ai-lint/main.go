@@ -14,6 +14,7 @@ import (
 
 	"golang.org/x/tools/go/analysis/multichecker"
 
+	"github.com/curtbushko/go-ai-lint/internal/application/cmdlint"
 	"github.com/curtbushko/go-ai-lint/internal/application/concurrencylint"
 	"github.com/curtbushko/go-ai-lint/internal/application/contextlint"
 	"github.com/curtbushko/go-ai-lint/internal/application/deferlint"
@@ -51,17 +52,18 @@ func main() {
 	os.Args = append([]string{os.Args[0]}, cli.RemainingArgs()...)
 
 	multichecker.Main(
-		deferlint.New().Analyzer(),
-		contextlint.New().Analyzer(),
-		goroutinelint.New().Analyzer(),
-		slicemaplint.New().Analyzer(),
-		errorlint.New().Analyzer(),
+		cmdlint.New().Analyzer(),
 		concurrencylint.New().Analyzer(),
-		naminglint.New().Analyzer(),
-		interfacelint.New().Analyzer(),
-		stringlint.New().Analyzer(),
-		paniclint.New().Analyzer(),
+		contextlint.New().Analyzer(),
+		deferlint.New().Analyzer(),
+		errorlint.New().Analyzer(),
+		goroutinelint.New().Analyzer(),
 		initlint.New().Analyzer(),
+		interfacelint.New().Analyzer(),
+		naminglint.New().Analyzer(),
 		optionlint.New().Analyzer(),
+		paniclint.New().Analyzer(),
+		slicemaplint.New().Analyzer(),
+		stringlint.New().Analyzer(),
 	)
 }

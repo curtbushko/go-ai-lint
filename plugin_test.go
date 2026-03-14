@@ -73,18 +73,19 @@ func TestGoAILintPluginLoadMode(t *testing.T) {
 func TestGoAILintPluginAllAnalyzers(t *testing.T) {
 	// Verify all 12 analyzers are registered
 	expectedAnalyzers := []string{
-		"deferlint",
-		"contextlint",
-		"slicemaplint",
-		"goroutinelint",
-		"errorlint",
+		"cmdlint",
 		"concurrencylint",
-		"naminglint",
-		"interfacelint",
-		"stringlint",
-		"paniclint",
+		"contextlint",
+		"deferlint",
+		"errorlint",
+		"goroutinelint",
 		"initlint",
+		"interfacelint",
+		"naminglint",
 		"optionlint",
+		"paniclint",
+		"slicemaplint",
+		"stringlint",
 	}
 
 	newPlugin, err := register.GetPlugin("go-ai-lint")

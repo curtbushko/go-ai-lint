@@ -32,6 +32,8 @@ const (
 	CategoryInit Category = "init"
 	// CategoryOption covers functional options pattern issues.
 	CategoryOption Category = "option"
+	// CategoryCmd covers CLI/command-related issues.
+	CategoryCmd Category = "cmd"
 )
 
 // String returns the string representation of the category.

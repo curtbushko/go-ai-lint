@@ -5,6 +5,7 @@ import (
 	"github.com/golangci/plugin-module-register/register"
 	"golang.org/x/tools/go/analysis"
 
+	"github.com/curtbushko/go-ai-lint/internal/application/cmdlint"
 	"github.com/curtbushko/go-ai-lint/internal/application/concurrencylint"
 	"github.com/curtbushko/go-ai-lint/internal/application/contextlint"
 	"github.com/curtbushko/go-ai-lint/internal/application/deferlint"
@@ -47,20 +48,21 @@ func New(settings any) (register.LinterPlugin, error) {
 
 // BuildAnalyzers returns the analyzers provided by this plugin.
 func (p *Plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) {
-	// Create all analyzers
+	// Create all analyzers (alphabetical order)
 	analyzers := []*analysis.Analyzer{
-		deferlint.New().Analyzer(),
-		contextlint.New().Analyzer(),
-		slicemaplint.New().Analyzer(),
-		goroutinelint.New().Analyzer(),
-		errorlint.New().Analyzer(),
+		cmdlint.New().Analyzer(),
 		concurrencylint.New().Analyzer(),
-		naminglint.New().Analyzer(),
-		interfacelint.New().Analyzer(),
-		stringlint.New().Analyzer(),
-		paniclint.New().Analyzer(),
+		contextlint.New().Analyzer(),
+		deferlint.New().Analyzer(),
+		errorlint.New().Analyzer(),
+		goroutinelint.New().Analyzer(),
 		initlint.New().Analyzer(),
+		interfacelint.New().Analyzer(),
+		naminglint.New().Analyzer(),
 		optionlint.New().Analyzer(),
+		paniclint.New().Analyzer(),
+		slicemaplint.New().Analyzer(),
+		stringlint.New().Analyzer(),
 	}
 
 	// Filter if specific analyzers are enabled
