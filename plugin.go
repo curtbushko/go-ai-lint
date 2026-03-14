@@ -13,6 +13,7 @@ import (
 	"github.com/curtbushko/go-ai-lint/internal/application/goroutinelint"
 	"github.com/curtbushko/go-ai-lint/internal/application/initlint"
 	"github.com/curtbushko/go-ai-lint/internal/application/interfacelint"
+	"github.com/curtbushko/go-ai-lint/internal/application/iolint"
 	"github.com/curtbushko/go-ai-lint/internal/application/naminglint"
 	"github.com/curtbushko/go-ai-lint/internal/application/optionlint"
 	"github.com/curtbushko/go-ai-lint/internal/application/paniclint"
@@ -59,6 +60,7 @@ func (p *Plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) {
 		goroutinelint.New().Analyzer(),
 		initlint.New().Analyzer(),
 		interfacelint.New().Analyzer(),
+		iolint.New().Analyzer(),
 		naminglint.New().Analyzer(),
 		optionlint.New().Analyzer(),
 		paniclint.New().Analyzer(),

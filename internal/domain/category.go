@@ -36,6 +36,8 @@ const (
 	CategoryCmd Category = "cmd"
 	// CategoryTest covers test-related issues.
 	CategoryTest Category = "test"
+	// CategoryIO covers io.Reader/io.Writer usage issues.
+	CategoryIO Category = "io"
 )
 
 // String returns the string representation of the category.
