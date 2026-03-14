@@ -71,7 +71,7 @@ func TestGoAILintPluginLoadMode(t *testing.T) {
 }
 
 func TestGoAILintPluginAllAnalyzers(t *testing.T) {
-	// Verify all 12 analyzers are registered
+	// Verify all 14 analyzers are registered
 	expectedAnalyzers := []string{
 		"cmdlint",
 		"concurrencylint",
@@ -86,6 +86,7 @@ func TestGoAILintPluginAllAnalyzers(t *testing.T) {
 		"paniclint",
 		"slicemaplint",
 		"stringlint",
+		"testlint",
 	}
 
 	newPlugin, err := register.GetPlugin("go-ai-lint")

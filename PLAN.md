@@ -48,7 +48,7 @@ A custom Go static analysis tool that detects common mistakes in AI-generated Go
 - [x] golangci-lint plugin integration
 - [x] SARIF reporter (IDE integration)
 - [x] Phase 14: cmdlint (AIL120-AIL122)
-- [ ] Phase 15: testlint (AIL130-AIL132) - with Kubernetes e2e exception
+- [x] Phase 15: testlint (AIL130-AIL132) - with Kubernetes e2e exception
 - [ ] Phase 16: iolint (AIL140-AIL142)
 - [ ] Documentation & README completion
 

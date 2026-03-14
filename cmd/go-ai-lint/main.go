@@ -27,6 +27,7 @@ import (
 	"github.com/curtbushko/go-ai-lint/internal/application/paniclint"
 	"github.com/curtbushko/go-ai-lint/internal/application/slicemaplint"
 	"github.com/curtbushko/go-ai-lint/internal/application/stringlint"
+	"github.com/curtbushko/go-ai-lint/internal/application/testlint"
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
@@ -65,5 +66,6 @@ func main() {
 		paniclint.New().Analyzer(),
 		slicemaplint.New().Analyzer(),
 		stringlint.New().Analyzer(),
+		testlint.New().Analyzer(),
 	)
 }

@@ -24,6 +24,7 @@ func TestCategoryConstants(t *testing.T) {
 		domain.CategoryInit,
 		domain.CategoryOption,
 		domain.CategoryCmd,
+		domain.CategoryTest,
 	}
 
 	// Verify they are all different
@@ -56,6 +57,7 @@ func TestCategoryString(t *testing.T) {
 		{domain.CategoryInit, "init"},
 		{domain.CategoryOption, "option"},
 		{domain.CategoryCmd, "cmd"},
+		{domain.CategoryTest, "test"},
 	}
 
 	for _, tt := range tests {

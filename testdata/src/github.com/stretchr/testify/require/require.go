@@ -16,3 +16,9 @@ func True(t TestingT, value bool, msgAndArgs ...interface{}) {}
 
 // NoError is a stub for require.NoError.
 func NoError(t TestingT, err error, msgAndArgs ...interface{}) {}
+
+// NotNil is a stub for require.NotNil.
+func NotNil(t TestingT, object interface{}, msgAndArgs ...interface{}) {}
+
+// Nil is a stub for require.Nil.
+func Nil(t TestingT, object interface{}, msgAndArgs ...interface{}) {}

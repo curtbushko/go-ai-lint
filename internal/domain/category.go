@@ -34,6 +34,8 @@ const (
 	CategoryOption Category = "option"
 	// CategoryCmd covers CLI/command-related issues.
 	CategoryCmd Category = "cmd"
+	// CategoryTest covers test-related issues.
+	CategoryTest Category = "test"
 )
 
 // String returns the string representation of the category.
