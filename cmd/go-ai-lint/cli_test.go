@@ -286,7 +286,7 @@ func TestFormatFlagIsRegistered(t *testing.T) {
 func TestExecuteFunctionExists(t *testing.T) {
 	// Execute function should be callable (we test it exists and is the right type)
 	fn := Execute
-	assert.NotNil(t, fn)
+	require.NotNil(t, fn)
 }
 
 func TestLoadConfigFromExplicitPath(t *testing.T) {
@@ -322,7 +322,7 @@ func TestLoadConfigFromDiscovery(t *testing.T) {
 	cfg, err := loadConfig()
 
 	require.NoError(t, err)
-	assert.NotNil(t, cfg)
+	require.NotNil(t, cfg)
 	// Should have defaults
 	assert.Equal(t, "text", cfg.Output.Format)
 }

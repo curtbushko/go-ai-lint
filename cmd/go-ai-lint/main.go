@@ -6,6 +6,8 @@
 //	go-ai-lint [flags] [packages]
 //
 // Run with --help for available flags and subcommands.
+//
+//nolint:cmdlint // cobra is in root.go following standard project layout
 package main
 
 import (

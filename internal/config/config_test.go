@@ -499,9 +499,9 @@ output:
 
 			err = cfg.Validate()
 			if tt.wantErr {
-				assert.Error(t, err, "Validate() should return error")
+				require.Error(t, err, "Validate() should return error")
 			} else {
-				assert.NoError(t, err, "Validate() should not return error")
+				require.NoError(t, err, "Validate() should not return error")
 			}
 		})
 	}

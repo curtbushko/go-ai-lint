@@ -36,7 +36,7 @@ func TestGoAILintPlugin(t *testing.T) {
 			break
 		}
 	}
-	assert.NotNil(t, deferlintAnalyzer, "deferlint analyzer should be present")
+	require.NotNil(t, deferlintAnalyzer, "deferlint analyzer should be present")
 
 	// Run deferlint on testdata
 	analysistest.Run(t, testdataDir(t), analyzers[deferlintAnalyzer.index], "deferlint")

@@ -5,11 +5,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1771253838,
-        "narHash": "sha256-wGne6cvlZH2xO8b2KmnlYnMJjPfe3kLW1xoe4twlAks=",
+        "lastModified": 1775317568,
+        "narHash": "sha256-vxQ2zq9cDH/SesJNV6bOoK49y32QlS30gxFapG55QqU=",
         "owner": "curtbushko",
         "repo": "golang-shared-configs",
-        "rev": "dbe10447a6932dbdead5a8b28dbcf9f58ad9f6ea",
+        "rev": "d3d38d4ab72a70ca37b9cce826da908b11dc8cd7",
         "type": "github"
       },
       "original": {
