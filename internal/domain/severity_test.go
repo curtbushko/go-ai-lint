@@ -3,6 +3,8 @@ package domain_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
@@ -22,9 +24,7 @@ func TestSeverityConstants(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if int(tt.severity) != tt.wantVal {
-				t.Errorf("got %d, want %d", tt.severity, tt.wantVal)
-			}
+			assert.Equal(t, tt.wantVal, int(tt.severity))
 		})
 	}
 }
@@ -43,22 +43,14 @@ func TestSeverityString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
 			got := tt.severity.String()
-			if got != tt.want {
-				t.Errorf("Severity.String() = %q, want %q", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "Severity.String()")
 		})
 	}
 }
 
 func TestSeverityOrdering(t *testing.T) {
 	// Critical should be "higher" severity than others (lower numeric value)
-	if domain.SeverityCritical >= domain.SeverityHigh {
-		t.Error("Critical should have lower value than High")
-	}
-	if domain.SeverityHigh >= domain.SeverityMedium {
-		t.Error("High should have lower value than Medium")
-	}
-	if domain.SeverityMedium >= domain.SeverityLow {
-		t.Error("Medium should have lower value than Low")
-	}
+	assert.True(t, domain.SeverityCritical < domain.SeverityHigh, "Critical should have lower value than High")
+	assert.True(t, domain.SeverityHigh < domain.SeverityMedium, "High should have lower value than Medium")
+	assert.True(t, domain.SeverityMedium < domain.SeverityLow, "Medium should have lower value than Low")
 }

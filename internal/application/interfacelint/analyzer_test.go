@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/analysis/analysistest"
 
 	"github.com/curtbushko/go-ai-lint/internal/application/interfacelint"
@@ -15,15 +17,9 @@ func TestInterfacelint(t *testing.T) {
 
 	// Verify analyzer metadata
 	analysisAnalyzer := interfaceLinter.Analyzer()
-	if analysisAnalyzer == nil {
-		t.Fatal("Analyzer() returned nil")
-	}
-	if analysisAnalyzer.Name != "interfacelint" {
-		t.Errorf("Analyzer name = %q, want interfacelint", analysisAnalyzer.Name)
-	}
-	if analysisAnalyzer.Doc == "" {
-		t.Error("Analyzer doc should not be empty")
-	}
+	require.NotNil(t, analysisAnalyzer, "Analyzer() returned nil")
+	assert.Equal(t, "interfacelint", analysisAnalyzer.Name, "Analyzer name mismatch")
+	assert.NotEmpty(t, analysisAnalyzer.Doc, "Analyzer doc should not be empty")
 
 	// Run analysis on testdata
 	analysistest.Run(t, testdataDir(t), analysisAnalyzer, "interfacelint")
@@ -31,18 +27,14 @@ func TestInterfacelint(t *testing.T) {
 
 func TestAnalyzerName(t *testing.T) {
 	interfaceLinter := interfacelint.New()
-	if interfaceLinter.Name() != "interfacelint" {
-		t.Errorf("Name() = %q, want interfacelint", interfaceLinter.Name())
-	}
+	assert.Equal(t, "interfacelint", interfaceLinter.Name(), "Name() mismatch")
 }
 
 func testdataDir(t *testing.T) string {
 	t.Helper()
 
 	_, testFilename, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("unable to get current test filename")
-	}
+	require.True(t, ok, "unable to get current test filename")
 
 	return filepath.Join(filepath.Dir(testFilename), "..", "..", "..", "testdata")
 }

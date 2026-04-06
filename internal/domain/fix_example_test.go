@@ -3,6 +3,8 @@ package domain_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
@@ -13,13 +15,7 @@ func TestFixExampleFields(t *testing.T) {
 		Explanation: "Capture the error from Close to avoid silent failures",
 	}
 
-	if example.Bad != "defer file.Close()" {
-		t.Errorf("Bad = %q, unexpected", example.Bad)
-	}
-	if example.Good != "defer func() { _ = file.Close() }()" {
-		t.Errorf("Good = %q, unexpected", example.Good)
-	}
-	if example.Explanation != "Capture the error from Close to avoid silent failures" {
-		t.Errorf("Explanation = %q, unexpected", example.Explanation)
-	}
+	assert.Equal(t, "defer file.Close()", example.Bad, "Bad")
+	assert.Equal(t, "defer func() { _ = file.Close() }()", example.Good, "Good")
+	assert.Equal(t, "Capture the error from Close to avoid silent failures", example.Explanation, "Explanation")
 }

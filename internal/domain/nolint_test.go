@@ -6,6 +6,9 @@ import (
 	"go/token"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
@@ -21,9 +24,7 @@ type Validate interface { //nolint:interfacelint
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("failed to parse code: %v", err)
-	}
+	require.NoError(t, err, "failed to parse code")
 
 	// Find position on line 2 (the interface declaration)
 	var targetPos token.Pos
@@ -42,9 +43,7 @@ type Validate interface { //nolint:interfacelint
 	// When: Check if should skip with nolint directive
 	// Then: Issue is suppressed by nolint directive
 	got := domain.ShouldSkip(fset, file.Comments, targetPos, "interfacelint")
-	if !got {
-		t.Errorf("ShouldSkip() = %v, want true when nolint is enabled", got)
-	}
+	assert.True(t, got, "ShouldSkip() should be true when nolint is enabled")
 }
 
 func TestNolintDisabledIgnoresDirectives(t *testing.T) {
@@ -59,9 +58,7 @@ type Validate interface { //nolint:interfacelint
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("failed to parse code: %v", err)
-	}
+	require.NoError(t, err, "failed to parse code")
 
 	// Find position on line 2 (the interface declaration)
 	var targetPos token.Pos
@@ -80,9 +77,7 @@ type Validate interface { //nolint:interfacelint
 	// When: Check if should skip with nolint directive but nolint disabled
 	// Then: Issue is still reported (directive ignored)
 	got := domain.ShouldSkip(fset, file.Comments, targetPos, "interfacelint")
-	if got {
-		t.Errorf("ShouldSkip() = %v, want false when nolint is disabled", got)
-	}
+	assert.False(t, got, "ShouldSkip() should be false when nolint is disabled")
 }
 
 func TestNolintSettingGlobal(t *testing.T) {
@@ -126,9 +121,7 @@ func foo() { //nolint
 		t.Run(tc.name, func(t *testing.T) {
 			fset := token.NewFileSet()
 			file, err := parser.ParseFile(fset, "test.go", tc.code, parser.ParseComments)
-			if err != nil {
-				t.Fatalf("failed to parse code: %v", err)
-			}
+			require.NoError(t, err, "failed to parse code")
 
 			// Find position on line 2
 			var targetPos token.Pos
@@ -147,9 +140,7 @@ func foo() { //nolint
 			// When: Run analyzer on code with nolint directives
 			// Then: All analyzers report issues (none respect nolint)
 			got := domain.ShouldSkip(fset, file.Comments, targetPos, tc.analyzerName)
-			if got {
-				t.Errorf("ShouldSkip() = %v, want false for %s when nolint is disabled globally", got, tc.analyzerName)
-			}
+			assert.False(t, got, "ShouldSkip() should be false for %s when nolint is disabled globally", tc.analyzerName)
 		})
 	}
 }
@@ -208,18 +199,8 @@ func TestParseDirective(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotAll, gotList := domain.ParseDirective(tt.comment)
-			if gotAll != tt.wantAll {
-				t.Errorf("ParseDirective(%q) all = %v, want %v", tt.comment, gotAll, tt.wantAll)
-			}
-			if len(gotList) != len(tt.wantList) {
-				t.Errorf("ParseDirective(%q) list = %v, want %v", tt.comment, gotList, tt.wantList)
-				return
-			}
-			for i := range gotList {
-				if gotList[i] != tt.wantList[i] {
-					t.Errorf("ParseDirective(%q) list[%d] = %q, want %q", tt.comment, i, gotList[i], tt.wantList[i])
-				}
-			}
+			assert.Equal(t, tt.wantAll, gotAll, "ParseDirective(%q) all", tt.comment)
+			assert.Equal(t, tt.wantList, gotList, "ParseDirective(%q) list", tt.comment)
 		})
 	}
 }
@@ -299,9 +280,7 @@ type Validate interface { //nolint:errorlint,interfacelint,paniclint
 		t.Run(tt.name, func(t *testing.T) {
 			fset := token.NewFileSet()
 			file, err := parser.ParseFile(fset, "test.go", tt.code, parser.ParseComments)
-			if err != nil {
-				t.Fatalf("failed to parse code: %v", err)
-			}
+			require.NoError(t, err, "failed to parse code")
 
 			// Find position on the target line
 			var targetPos token.Pos
@@ -317,14 +296,10 @@ type Validate interface { //nolint:errorlint,interfacelint,paniclint
 				return true
 			})
 
-			if targetPos == token.NoPos {
-				t.Fatalf("could not find node on line %d", tt.lineToCheck)
-			}
+			require.NotEqual(t, token.NoPos, targetPos, "could not find node on line %d", tt.lineToCheck)
 
 			got := domain.ShouldSkip(fset, file.Comments, targetPos, tt.analyzerName)
-			if got != tt.want {
-				t.Errorf("ShouldSkip() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "ShouldSkip()")
 		})
 	}
 }
@@ -345,9 +320,7 @@ func foo() { //nolint
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("failed to parse code: %v", err)
-	}
+	require.NoError(t, err, "failed to parse code")
 
 	// Find position on line 2
 	var targetPos token.Pos
@@ -366,9 +339,7 @@ func foo() { //nolint
 	// When: Analyze code with bare //nolint comment
 	// Then: Issue is suppressed
 	got := domain.ShouldSkip(fset, file.Comments, targetPos, "deferlint")
-	if !got {
-		t.Errorf("ShouldSkip() = %v, want true when require-specific is false", got)
-	}
+	assert.True(t, got, "ShouldSkip() should be true when require-specific is false")
 }
 
 func TestRequireSpecificRejectsBare(t *testing.T) {
@@ -387,9 +358,7 @@ func foo() { //nolint
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("failed to parse code: %v", err)
-	}
+	require.NoError(t, err, "failed to parse code")
 
 	// Find position on line 2
 	var targetPos token.Pos
@@ -408,9 +377,7 @@ func foo() { //nolint
 	// When: Analyze code with bare //nolint comment (no analyzer name)
 	// Then: Issue is NOT suppressed (bare nolint ignored)
 	got := domain.ShouldSkip(fset, file.Comments, targetPos, "deferlint")
-	if got {
-		t.Errorf("ShouldSkip() = %v, want false when require-specific is true and bare //nolint used", got)
-	}
+	assert.False(t, got, "ShouldSkip() should be false when require-specific is true and bare //nolint used")
 }
 
 func TestRequireSpecificAllowsSpecific(t *testing.T) {
@@ -429,9 +396,7 @@ func foo() { //nolint:deferlint
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("failed to parse code: %v", err)
-	}
+	require.NoError(t, err, "failed to parse code")
 
 	// Find position on line 2
 	var targetPos token.Pos
@@ -450,9 +415,7 @@ func foo() { //nolint:deferlint
 	// When: Analyze code with //nolint:deferlint comment
 	// Then: Issue is suppressed (specific nolint honored)
 	got := domain.ShouldSkip(fset, file.Comments, targetPos, "deferlint")
-	if !got {
-		t.Errorf("ShouldSkip() = %v, want true when require-specific is true and specific analyzer named", got)
-	}
+	assert.True(t, got, "ShouldSkip() should be true when require-specific is true and specific analyzer named")
 }
 
 func TestRequireSpecificWrongAnalyzer(t *testing.T) {
@@ -471,9 +434,7 @@ func foo() { //nolint:errorlint
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "test.go", code, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("failed to parse code: %v", err)
-	}
+	require.NoError(t, err, "failed to parse code")
 
 	// Find position on line 2
 	var targetPos token.Pos
@@ -492,7 +453,5 @@ func foo() { //nolint:errorlint
 	// When: Analyze deferlint issue with //nolint:errorlint comment
 	// Then: Issue is NOT suppressed (wrong analyzer)
 	got := domain.ShouldSkip(fset, file.Comments, targetPos, "deferlint")
-	if got {
-		t.Errorf("ShouldSkip() = %v, want false when nolint specifies wrong analyzer", got)
-	}
+	assert.False(t, got, "ShouldSkip() should be false when nolint specifies wrong analyzer")
 }

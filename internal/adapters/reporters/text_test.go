@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/curtbushko/go-ai-lint/internal/adapters/reporters"
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
@@ -32,20 +35,12 @@ func TestTextReporter(t *testing.T) {
 		reporter := reporters.NewTextReporter(&buf, false)
 
 		err := reporter.Report(issues)
-		if err != nil {
-			t.Fatalf("Report() error = %v", err)
-		}
+		require.NoError(t, err)
 
 		output := buf.String()
-		if !strings.Contains(output, "service.go:42:3") {
-			t.Errorf("output missing position, got: %s", output)
-		}
-		if !strings.Contains(output, "AIL001") {
-			t.Errorf("output missing ID, got: %s", output)
-		}
-		if !strings.Contains(output, "defer-in-loop") {
-			t.Errorf("output missing name, got: %s", output)
-		}
+		assert.True(t, strings.Contains(output, "service.go:42:3"), "output missing position, got: %s", output)
+		assert.True(t, strings.Contains(output, "AIL001"), "output missing ID, got: %s", output)
+		assert.True(t, strings.Contains(output, "defer-in-loop"), "output missing name, got: %s", output)
 	})
 
 	t.Run("verbose output", func(t *testing.T) {
@@ -53,17 +48,11 @@ func TestTextReporter(t *testing.T) {
 		reporter := reporters.NewTextReporter(&buf, true)
 
 		err := reporter.Report(issues)
-		if err != nil {
-			t.Fatalf("Report() error = %v", err)
-		}
+		require.NoError(t, err)
 
 		output := buf.String()
-		if !strings.Contains(output, "Why:") {
-			t.Errorf("verbose output missing Why, got: %s", output)
-		}
-		if !strings.Contains(output, "Fix:") {
-			t.Errorf("verbose output missing Fix, got: %s", output)
-		}
+		assert.True(t, strings.Contains(output, "Why:"), "verbose output missing Why, got: %s", output)
+		assert.True(t, strings.Contains(output, "Fix:"), "verbose output missing Fix, got: %s", output)
 	})
 }
 
@@ -72,11 +61,7 @@ func TestTextReporterEmptyIssues(t *testing.T) {
 	reporter := reporters.NewTextReporter(&buf, false)
 
 	err := reporter.Report([]domain.Issue{})
-	if err != nil {
-		t.Fatalf("Report() error = %v", err)
-	}
+	require.NoError(t, err)
 
-	if buf.Len() != 0 {
-		t.Errorf("expected empty output, got: %s", buf.String())
-	}
+	assert.Equal(t, 0, buf.Len(), "expected empty output, got: %s", buf.String())
 }

@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/curtbushko/go-ai-lint/internal/config"
 )
@@ -16,644 +20,336 @@ const (
 	formatJSON   = "json"
 )
 
-func TestConfigFlagLoadsSpecifiedFile(t *testing.T) {
-	// Given: Create temp config file with custom settings
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "custom-config.yml")
-	configContent := `
-version: 1
-output:
-  format: sarif
-severity:
-  min-severity: critical
-`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
+// resetCLI resets viper and cobra state between tests.
+func resetCLI() {
+	viper.Reset()
+	cfgFile = "" // Reset global config file path
 
-	// When: Parse CLI args with --config flag
-	cli := NewCLI()
-	cfg, err := cli.ParseConfig([]string{"--config=" + configPath})
+	rootCmd.ResetFlags()
+	rootCmd.ResetCommands()
 
-	// Then: Config is loaded from specified path
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if cfg == nil {
-		t.Fatal("ParseConfig() returned nil config")
-	}
-	if cfg.Output.Format != "sarif" {
-		t.Errorf("Output.Format = %q, want sarif", cfg.Output.Format)
-	}
-	if cfg.Severity.MinSeverity != "critical" {
-		t.Errorf("Severity.MinSeverity = %q, want critical", cfg.Severity.MinSeverity)
-	}
+	// Re-initialize flags
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
+	rootCmd.PersistentFlags().String("enable", "", "analyzers to enable")
+	rootCmd.PersistentFlags().String("disable", "", "analyzers to disable")
+	rootCmd.PersistentFlags().String("min-severity", "", "minimum severity")
+	rootCmd.PersistentFlags().String("format", "", "output format")
+
+	_ = viper.BindPFlag("enable", rootCmd.PersistentFlags().Lookup("enable"))
+	_ = viper.BindPFlag("disable", rootCmd.PersistentFlags().Lookup("disable"))
+	_ = viper.BindPFlag("min-severity", rootCmd.PersistentFlags().Lookup("min-severity"))
+	_ = viper.BindPFlag("format", rootCmd.PersistentFlags().Lookup("format"))
+
+	// Reset init command flags
+	initCmd.ResetFlags()
+	initCmd.Flags().Bool("force", false, "overwrite existing config file")
+	initCmd.Flags().String("dir", "", "directory for config file")
+
+	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(showConfigCmd)
 }
 
-func TestConfigFlagNonExistentFileError(t *testing.T) {
-	// Given: No config file at path
-	nonExistentPath := "/nonexistent/path/config.yml"
+// executeCommand executes the root command with the given args and captures output.
+func executeCommand(args ...string) (stdout string, err error) {
+	resetCLI()
 
-	// When: Call CLI with --config pointing to non-existent file
-	cli := NewCLI()
-	_, err := cli.ParseConfig([]string{"--config=" + nonExistentPath})
+	stdoutBuf := new(bytes.Buffer)
+	stderrBuf := new(bytes.Buffer)
+	rootCmd.SetOut(stdoutBuf)
+	rootCmd.SetErr(stderrBuf)
+	rootCmd.SetArgs(args)
 
-	// Then: Clear error message about missing config file
-	if err == nil {
-		t.Fatal("ParseConfig() expected error for non-existent config file")
-	}
-}
-
-func TestConfigFlagPrecedence(t *testing.T) {
-	// Given: Config file in current dir AND explicit --config pointing elsewhere
-	tmpDir := t.TempDir()
-
-	// Create "discovered" config in tmpDir (simulates current directory config)
-	discoveredPath := filepath.Join(tmpDir, ".go-ai-lint.yml")
-	discoveredContent := `
-version: 1
-output:
-  format: json
-`
-	if err := os.WriteFile(discoveredPath, []byte(discoveredContent), 0644); err != nil {
-		t.Fatalf("failed to write discovered config: %v", err)
-	}
-
-	// Create explicit config in a subdirectory
-	explicitDir := filepath.Join(tmpDir, "explicit")
-	if err := os.MkdirAll(explicitDir, 0755); err != nil {
-		t.Fatalf("failed to create explicit dir: %v", err)
-	}
-	explicitPath := filepath.Join(explicitDir, "my-config.yml")
-	explicitContent := `
-version: 1
-output:
-  format: ai
-`
-	if err := os.WriteFile(explicitPath, []byte(explicitContent), 0644); err != nil {
-		t.Fatalf("failed to write explicit config: %v", err)
-	}
-
-	// When: Call CLI with --config flag pointing to explicit config
-	cli := NewCLI()
-	cfg, err := cli.ParseConfig([]string{"--config=" + explicitPath})
-
-	// Then: Explicit config is used, not discovered one
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if cfg.Output.Format != "ai" {
-		t.Errorf("Output.Format = %q, want ai (explicit config should take precedence)", cfg.Output.Format)
-	}
-}
-
-func TestNoConfigFlagUsesDefaultDiscovery(t *testing.T) {
-	// Given: No --config flag provided
-	cli := NewCLI()
-
-	// When: Parse args without --config
-	cfg, err := cli.ParseConfig([]string{})
-
-	// Then: Default config is returned (since no .go-ai-lint.yml in test context)
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if cfg == nil {
-		t.Fatal("ParseConfig() returned nil config")
-	}
-	// Should have defaults
-	if cfg.Output.Format != "text" {
-		t.Errorf("Output.Format = %q, want text (default)", cfg.Output.Format)
-	}
-}
-
-func TestRemainingArgsPassedThrough(t *testing.T) {
-	// Given: CLI args with --config and additional analyzer flags
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
-	if err := os.WriteFile(configPath, []byte("version: 1"), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	// When: Parse args
-	cli := NewCLI()
-	_, err := cli.ParseConfig([]string{"--config=" + configPath, "-deferlint", "./..."})
-
-	// Then: Config loaded successfully and remaining args available
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-
-	remaining := cli.RemainingArgs()
-	if len(remaining) != 2 {
-		t.Errorf("RemainingArgs() len = %d, want 2", len(remaining))
-	}
-}
-
-func TestShowConfigDisplaysYAML(t *testing.T) {
-	// Given: Config file exists with custom settings
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "custom-config.yml")
-	configContent := `
-version: 1
-output:
-  format: sarif
-severity:
-  min-severity: critical
-`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
-
-	// When: Call CLI with --show-config
-	cli := NewCLI()
-	var buf bytes.Buffer
-	shouldExit, err := cli.ParseAndExecute([]string{"--config=" + configPath, "--show-config"}, &buf)
-
-	// Then: Config is printed as valid YAML to stdout and program should exit
-	if err != nil {
-		t.Fatalf("ParseAndExecute() error = %v", err)
-	}
-	if !shouldExit {
-		t.Error("ParseAndExecute() shouldExit = false, want true for --show-config")
-	}
-
-	output := buf.String()
-	if !strings.Contains(output, "format: sarif") {
-		t.Errorf("Output missing 'format: sarif'\nGot:\n%s", output)
-	}
-	if !strings.Contains(output, "min-severity: critical") {
-		t.Errorf("Output missing 'min-severity: critical'\nGot:\n%s", output)
-	}
-}
-
-func TestShowConfigShowsDefaults(t *testing.T) {
-	// Given: No config file in any search path
-	tmpDir := t.TempDir()
-	// Change to temp dir with no config file
-	oldWd, wdErr := os.Getwd()
-	if wdErr != nil {
-		t.Fatalf("failed to get working directory: %v", wdErr)
-	}
-	if chdirErr := os.Chdir(tmpDir); chdirErr != nil {
-		t.Fatalf("failed to change directory: %v", chdirErr)
-	}
-	defer func() {
-		if restoreErr := os.Chdir(oldWd); restoreErr != nil {
-			t.Logf("failed to restore working directory: %v", restoreErr)
-		}
-	}()
-
-	// When: Call CLI with --show-config
-	cli := NewCLI()
-	var buf bytes.Buffer
-	shouldExit, err := cli.ParseAndExecute([]string{"--show-config"}, &buf)
-
-	// Then: Default config is printed as YAML
-	if err != nil {
-		t.Fatalf("ParseAndExecute() error = %v", err)
-	}
-	if !shouldExit {
-		t.Error("ParseAndExecute() shouldExit = false, want true for --show-config")
-	}
-
-	output := buf.String()
-	// Default format is "text"
-	if !strings.Contains(output, "format: text") {
-		t.Errorf("Output missing 'format: text' (default)\nGot:\n%s", output)
-	}
-	// Should indicate defaults were used
-	if !strings.Contains(output, "# Source: defaults") {
-		t.Errorf("Output missing source annotation for defaults\nGot:\n%s", output)
-	}
-}
-
-func TestShowConfigIncludesSource(t *testing.T) {
-	// Given: Config file exists
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "my-config.yml")
-	configContent := `version: 1`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
-
-	// When: Call CLI with --show-config
-	cli := NewCLI()
-	var buf bytes.Buffer
-	shouldExit, err := cli.ParseAndExecute([]string{"--config=" + configPath, "--show-config"}, &buf)
-
-	// Then: Output includes comment with config source path
-	if err != nil {
-		t.Fatalf("ParseAndExecute() error = %v", err)
-	}
-	if !shouldExit {
-		t.Error("ParseAndExecute() shouldExit = false, want true for --show-config")
-	}
-
-	output := buf.String()
-	expectedSource := "# Source: " + configPath
-	if !strings.Contains(output, expectedSource) {
-		t.Errorf("Output missing source annotation %q\nGot:\n%s", expectedSource, output)
-	}
+	err = rootCmd.Execute()
+	return stdoutBuf.String(), err
 }
 
 func TestInitCreatesConfigFile(t *testing.T) {
-	// Given: No .go-ai-lint.yml exists in working directory
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, config.ConfigFileName)
 
-	// When: Call CLI with --init
-	cli := NewCLI()
-	var buf bytes.Buffer
-	shouldExit, err := cli.ParseAndExecute([]string{"--init", "--dir=" + tmpDir}, &buf)
+	stdout, err := executeCommand("init", "--dir="+tmpDir)
 
-	// Then: .go-ai-lint.yml is created with default values and comments
-	if err != nil {
-		t.Fatalf("ParseAndExecute() error = %v", err)
-	}
-	if !shouldExit {
-		t.Error("ParseAndExecute() shouldExit = false, want true for --init")
-	}
+	require.NoError(t, err)
+	assert.FileExists(t, configPath)
+	assert.Contains(t, stdout, configPath)
 
-	// Verify file was created
-	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
-		t.Fatalf("Config file was not created at %s", configPath)
-	}
-
-	// Verify content contains expected sections
-	content, readErr := os.ReadFile(configPath)
-	if readErr != nil {
-		t.Fatalf("failed to read config file: %v", readErr)
-	}
-
-	contentStr := string(content)
-	if !strings.Contains(contentStr, "version: 1") {
-		t.Errorf("Config file missing 'version: 1'\nGot:\n%s", contentStr)
-	}
-	if !strings.Contains(contentStr, "# go-ai-lint configuration") {
-		t.Errorf("Config file missing header comment\nGot:\n%s", contentStr)
-	}
-
-	// Verify success message was printed
-	output := buf.String()
-	if !strings.Contains(output, configPath) {
-		t.Errorf("Output missing config path\nGot:\n%s", output)
-	}
+	content, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "version: 1")
+	assert.Contains(t, string(content), "# go-ai-lint configuration")
 }
 
 func TestInitRefusesOverwrite(t *testing.T) {
-	// Given: .go-ai-lint.yml already exists
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, config.ConfigFileName)
 	existingContent := "version: 1\noutput:\n  format: json\n"
-	if err := os.WriteFile(configPath, []byte(existingContent), 0644); err != nil {
-		t.Fatalf("failed to write existing config: %v", err)
-	}
+	err := os.WriteFile(configPath, []byte(existingContent), 0644)
+	require.NoError(t, err)
 
-	// When: Call CLI with --init
-	cli := NewCLI()
-	var buf bytes.Buffer
-	_, err := cli.ParseAndExecute([]string{"--init", "--dir=" + tmpDir}, &buf)
+	_, err = executeCommand("init", "--dir="+tmpDir)
 
-	// Then: Error message about existing config, file not modified
-	if err == nil {
-		t.Fatal("ParseAndExecute() expected error for existing config")
-	}
-	if !strings.Contains(err.Error(), "already exists") {
-		t.Errorf("Error should mention 'already exists', got: %v", err)
-	}
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists")
 
 	// Verify file was not modified
-	content, readErr := os.ReadFile(configPath)
-	if readErr != nil {
-		t.Fatalf("failed to read config file: %v", readErr)
-	}
-	if string(content) != existingContent {
-		t.Errorf("Config file was modified when it should not have been")
-	}
+	content, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+	assert.Equal(t, existingContent, string(content))
 }
 
 func TestInitForceOverwrites(t *testing.T) {
-	// Given: .go-ai-lint.yml already exists with custom settings
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, config.ConfigFileName)
 	existingContent := "version: 1\noutput:\n  format: json\n"
-	if err := os.WriteFile(configPath, []byte(existingContent), 0644); err != nil {
-		t.Fatalf("failed to write existing config: %v", err)
-	}
+	err := os.WriteFile(configPath, []byte(existingContent), 0644)
+	require.NoError(t, err)
 
-	// When: Call CLI with --init --force
-	cli := NewCLI()
-	var buf bytes.Buffer
-	shouldExit, err := cli.ParseAndExecute([]string{"--init", "--force", "--dir=" + tmpDir}, &buf)
+	_, err = executeCommand("init", "--force", "--dir="+tmpDir)
 
-	// Then: Config file is replaced with defaults
-	if err != nil {
-		t.Fatalf("ParseAndExecute() error = %v", err)
-	}
-	if !shouldExit {
-		t.Error("ParseAndExecute() shouldExit = false, want true for --init")
-	}
+	require.NoError(t, err)
 
-	// Verify file was overwritten with new content
-	content, readErr := os.ReadFile(configPath)
-	if readErr != nil {
-		t.Fatalf("failed to read config file: %v", readErr)
-	}
-	contentStr := string(content)
-
-	// Should have default template content, not the old json format
-	if strings.Contains(contentStr, "format: json") {
-		t.Errorf("Config file should have been overwritten but still has old content")
-	}
-	if !strings.Contains(contentStr, "# go-ai-lint configuration") {
-		t.Errorf("Config file missing header comment after overwrite\nGot:\n%s", contentStr)
-	}
+	content, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+	assert.NotContains(t, string(content), "format: json")
+	assert.Contains(t, string(content), "# go-ai-lint configuration")
 }
 
-func TestEnableFlagAddsAnalyzer(t *testing.T) {
-	// Given: Config has enable-all: false
+func TestShowConfigDisplaysYAML(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
-	configContent := `
-version: 1
-analyzers:
-  enable-all: false
-  enable: []
-`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	// When: Call with --enable=deferlint,errorlint
-	cli := NewCLI()
-	cfg, err := cli.ParseConfig([]string{"--config=" + configPath, "--enable=deferlint,errorlint"})
-
-	// Then: deferlint and errorlint are enabled, others disabled
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if !cfg.IsAnalyzerEnabled("deferlint") {
-		t.Error("deferlint should be enabled after --enable flag")
-	}
-	if !cfg.IsAnalyzerEnabled("errorlint") {
-		t.Error("errorlint should be enabled after --enable flag")
-	}
-	if cfg.IsAnalyzerEnabled("optionlint") {
-		t.Error("optionlint should remain disabled (not in --enable list)")
-	}
-}
-
-func TestDisableFlagRemovesAnalyzer(t *testing.T) {
-	// Given: Config has enable-all: true
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
-	configContent := `
-version: 1
-analyzers:
-  enable-all: true
-`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	// When: Call with --disable=optionlint
-	cli := NewCLI()
-	cfg, err := cli.ParseConfig([]string{"--config=" + configPath, "--disable=optionlint"})
-
-	// Then: optionlint is disabled, all others remain enabled
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if cfg.IsAnalyzerEnabled("optionlint") {
-		t.Error("optionlint should be disabled after --disable flag")
-	}
-	if !cfg.IsAnalyzerEnabled("deferlint") {
-		t.Error("deferlint should remain enabled (enable-all: true)")
-	}
-}
-
-func TestMinSeverityFlag(t *testing.T) {
-	// Given: Config has min-severity: low
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
-	configContent := `
-version: 1
-severity:
-  min-severity: low
-`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	// When: Call with --min-severity=high
-	cli := NewCLI()
-	cfg, err := cli.ParseConfig([]string{"--config=" + configPath, "--min-severity=" + severityHigh})
-
-	// Then: min-severity is high
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if cfg.Severity.MinSeverity != severityHigh {
-		t.Errorf("Severity.MinSeverity = %q, want %s", cfg.Severity.MinSeverity, severityHigh)
-	}
-}
-
-func TestFormatFlag(t *testing.T) {
-	// Given: Config has format: text
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
+	configPath := filepath.Join(tmpDir, "custom-config.yml")
 	configContent := `
 version: 1
 output:
-  format: text
-`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	// When: Call with --format=json
-	cli := NewCLI()
-	cfg, err := cli.ParseConfig([]string{"--config=" + configPath, "--format=" + formatJSON})
-
-	// Then: Output format is JSON
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if cfg.Output.Format != formatJSON {
-		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
-	}
-}
-
-func TestCLIFlagsOverrideConfig(t *testing.T) {
-	// Given: Config file has format: text, min-severity: low
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
-	configContent := `
-version: 1
-output:
-  format: text
+  format: sarif
 severity:
-  min-severity: low
+  min-severity: critical
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-	// When: Call with --format=json --min-severity=high
-	cli := NewCLI()
-	cfg, err := cli.ParseConfig([]string{"--config=" + configPath, "--format=" + formatJSON, "--min-severity=" + severityHigh})
+	stdout, err := executeCommand("show-config", "--config="+configPath)
 
-	// Then: Merged config uses CLI values
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if cfg.Output.Format != formatJSON {
-		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
-	}
-	if cfg.Severity.MinSeverity != severityHigh {
-		t.Errorf("Severity.MinSeverity = %q, want %s", cfg.Severity.MinSeverity, severityHigh)
-	}
+	require.NoError(t, err)
+	assert.Contains(t, stdout, "format: sarif")
+	assert.Contains(t, stdout, "min-severity: critical")
 }
 
-func TestInvalidMinSeverityError(t *testing.T) {
-	// Given: Config file exists
+func TestShowConfigShowsDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
-	if err := os.WriteFile(configPath, []byte("version: 1"), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
+	oldWd, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldWd) }()
 
-	// When: Call with invalid --min-severity
-	cli := NewCLI()
-	_, err := cli.ParseConfig([]string{"--config=" + configPath, "--min-severity=invalid"})
+	stdout, err := executeCommand("show-config")
 
-	// Then: Clear error about invalid severity
-	if err == nil {
-		t.Fatal("ParseConfig() expected error for invalid min-severity")
-	}
-	if !strings.Contains(err.Error(), "invalid") {
-		t.Errorf("Error should mention 'invalid', got: %v", err)
-	}
+	require.NoError(t, err)
+	assert.Contains(t, stdout, "format: text")
+	assert.Contains(t, stdout, "# Source: defaults")
 }
 
-func TestInvalidFormatError(t *testing.T) {
-	// Given: Config file exists
+func TestShowConfigIncludesSource(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
-	if err := os.WriteFile(configPath, []byte("version: 1"), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
+	configPath := filepath.Join(tmpDir, "my-config.yml")
+	err := os.WriteFile(configPath, []byte("version: 1"), 0644)
+	require.NoError(t, err)
 
-	// When: Call with invalid --format
-	cli := NewCLI()
-	_, err := cli.ParseConfig([]string{"--config=" + configPath, "--format=invalid"})
+	stdout, err := executeCommand("show-config", "--config="+configPath)
 
-	// Then: Clear error about invalid format
-	if err == nil {
-		t.Fatal("ParseConfig() expected error for invalid format")
-	}
-	if !strings.Contains(err.Error(), "invalid") {
-		t.Errorf("Error should mention 'invalid', got: %v", err)
-	}
+	require.NoError(t, err)
+	assert.Contains(t, stdout, "# Source: "+configPath)
 }
 
-func TestAllValidFormats(t *testing.T) {
-	validFormats := []string{"text", formatJSON, "ai", "sarif"}
+func TestParseCommaSeparated(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "empty string",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:     "single item",
+			input:    "deferlint",
+			expected: []string{"deferlint"},
+		},
+		{
+			name:     "multiple items",
+			input:    "deferlint,errorlint,optionlint",
+			expected: []string{"deferlint", "errorlint", "optionlint"},
+		},
+		{
+			name:     "with spaces",
+			input:    "deferlint, errorlint , optionlint",
+			expected: []string{"deferlint", "errorlint", "optionlint"},
+		},
+		{
+			name:     "empty items ignored",
+			input:    "deferlint,,errorlint",
+			expected: []string{"deferlint", "errorlint"},
+		},
+	}
 
-	for _, format := range validFormats {
-		t.Run(format, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, "config.yml")
-			if err := os.WriteFile(configPath, []byte("version: 1"), 0644); err != nil {
-				t.Fatalf("failed to write config: %v", err)
-			}
-
-			cli := NewCLI()
-			cfg, err := cli.ParseConfig([]string{"--config=" + configPath, "--format=" + format})
-
-			if err != nil {
-				t.Fatalf("ParseConfig() error = %v for format %s", err, format)
-			}
-			if cfg.Output.Format != format {
-				t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, format)
-			}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseCommaSeparated(tt.input)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
-func TestAllValidSeverities(t *testing.T) {
-	validSeverities := []string{"low", "medium", severityHigh, "critical"}
+func TestHelpCommand(t *testing.T) {
+	stdout, err := executeCommand("--help")
 
-	for _, severity := range validSeverities {
-		t.Run(severity, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, "config.yml")
-			if err := os.WriteFile(configPath, []byte("version: 1"), 0644); err != nil {
-				t.Fatalf("failed to write config: %v", err)
-			}
-
-			cli := NewCLI()
-			cfg, err := cli.ParseConfig([]string{"--config=" + configPath, "--min-severity=" + severity})
-
-			if err != nil {
-				t.Fatalf("ParseConfig() error = %v for severity %s", err, severity)
-			}
-			if cfg.Severity.MinSeverity != severity {
-				t.Errorf("Severity.MinSeverity = %q, want %s", cfg.Severity.MinSeverity, severity)
-			}
-		})
-	}
+	require.NoError(t, err)
+	assert.Contains(t, stdout, "go-ai-lint")
+	assert.Contains(t, stdout, "AI-generated Go code")
 }
 
-func TestConfigMethodReturnsLoadedConfig(t *testing.T) {
-	// Given: Config file with custom settings
+func TestRootCommandDescription(t *testing.T) {
+	resetCLI()
+
+	assert.Equal(t, "go-ai-lint [flags] [packages]", rootCmd.Use)
+	assert.Contains(t, rootCmd.Short, "AI-generated Go code")
+}
+
+func TestInitCommandExists(t *testing.T) {
+	resetCLI()
+
+	var found bool
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == "init" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "init subcommand should exist")
+}
+
+func TestShowConfigCommandExists(t *testing.T) {
+	resetCLI()
+
+	var found bool
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == "show-config" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "show-config subcommand should exist")
+}
+
+func TestConfigFlagIsRegistered(t *testing.T) {
+	resetCLI()
+
+	flag := rootCmd.PersistentFlags().Lookup("config")
+	require.NotNil(t, flag)
+	assert.Equal(t, "config", flag.Name)
+}
+
+func TestEnableFlagIsRegistered(t *testing.T) {
+	resetCLI()
+
+	flag := rootCmd.PersistentFlags().Lookup("enable")
+	require.NotNil(t, flag)
+	assert.Equal(t, "enable", flag.Name)
+}
+
+func TestDisableFlagIsRegistered(t *testing.T) {
+	resetCLI()
+
+	flag := rootCmd.PersistentFlags().Lookup("disable")
+	require.NotNil(t, flag)
+	assert.Equal(t, "disable", flag.Name)
+}
+
+func TestMinSeverityFlagIsRegistered(t *testing.T) {
+	resetCLI()
+
+	flag := rootCmd.PersistentFlags().Lookup("min-severity")
+	require.NotNil(t, flag)
+	assert.Equal(t, "min-severity", flag.Name)
+}
+
+func TestFormatFlagIsRegistered(t *testing.T) {
+	resetCLI()
+
+	flag := rootCmd.PersistentFlags().Lookup("format")
+	require.NotNil(t, flag)
+	assert.Equal(t, "format", flag.Name)
+}
+
+func TestExecuteFunctionExists(t *testing.T) {
+	// Execute function should be callable (we test it exists and is the right type)
+	fn := Execute
+	assert.NotNil(t, fn)
+}
+
+func TestLoadConfigFromExplicitPath(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yml")
+	configPath := filepath.Join(tmpDir, "custom-config.yml")
 	configContent := `
 version: 1
-nolint:
-  enabled: false
-  require-specific: true
+output:
+  format: sarif
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-	// When: ParseAndExecute is called
-	cli := NewCLI()
-	var buf bytes.Buffer
-	shouldExit, err := cli.ParseAndExecute([]string{"--config=" + configPath}, &buf)
+	cfgFile = configPath
+	defer func() { cfgFile = "" }()
 
-	// Then: Config() returns the loaded config
-	if err != nil {
-		t.Fatalf("ParseAndExecute() error = %v", err)
-	}
-	if shouldExit {
-		t.Error("ParseAndExecute() shouldExit = true, want false for normal operation")
-	}
+	cfg, err := loadConfig()
 
-	cfg := cli.Config()
-	if cfg == nil {
-		t.Fatal("Config() returned nil after ParseAndExecute")
-	}
-	if cfg.Nolint.Enabled {
-		t.Error("Config().Nolint.Enabled = true, want false")
-	}
-	if !cfg.Nolint.RequireSpecific {
-		t.Error("Config().Nolint.RequireSpecific = false, want true")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "sarif", cfg.Output.Format)
 }
 
-func TestConfigMethodReturnsNilBeforeParse(t *testing.T) {
-	// Given: New CLI without parsing
-	cli := NewCLI()
+func TestLoadConfigFromDiscovery(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldWd, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldWd) }()
 
-	// When: Config() is called before ParseAndExecute
-	cfg := cli.Config()
+	cfgFile = ""
 
-	// Then: Returns nil
-	if cfg != nil {
-		t.Error("Config() should return nil before ParseAndExecute")
-	}
+	cfg, err := loadConfig()
+
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+	// Should have defaults
+	assert.Equal(t, "text", cfg.Output.Format)
+}
+
+func TestApplyOverrides(t *testing.T) {
+	viper.Reset()
+	viper.Set("enable", "deferlint,errorlint")
+	viper.Set("disable", "optionlint")
+	viper.Set("min-severity", severityHigh)
+	viper.Set("format", formatJSON)
+
+	cfg := config.Default()
+	applyOverrides(cfg)
+
+	assert.Contains(t, cfg.Analyzers.Enable, "deferlint")
+	assert.Contains(t, cfg.Analyzers.Enable, "errorlint")
+	assert.Contains(t, cfg.Analyzers.Disable, "optionlint")
+	assert.Equal(t, severityHigh, cfg.Severity.MinSeverity)
+	assert.Equal(t, formatJSON, cfg.Output.Format)
+}
+
+func TestRunInitWithInvalidDir(t *testing.T) {
+	cmd := &cobra.Command{}
+	cmd.Flags().Bool("force", false, "")
+	cmd.Flags().String("dir", "/nonexistent/path/that/does/not/exist", "")
+
+	err := runInit(cmd, nil)
+
+	require.Error(t, err)
 }

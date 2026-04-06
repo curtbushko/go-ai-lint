@@ -5,69 +5,17 @@
 //
 //	go-ai-lint [flags] [packages]
 //
-// Run with -help for available flags.
+// Run with --help for available flags and subcommands.
 package main
 
 import (
 	"fmt"
 	"os"
-
-	"golang.org/x/tools/go/analysis"
-
-	"github.com/curtbushko/go-ai-lint/internal/application/cmdlint"
-	"github.com/curtbushko/go-ai-lint/internal/application/concurrencylint"
-	"github.com/curtbushko/go-ai-lint/internal/application/contextlint"
-	"github.com/curtbushko/go-ai-lint/internal/application/deferlint"
-	"github.com/curtbushko/go-ai-lint/internal/application/errorlint"
-	"github.com/curtbushko/go-ai-lint/internal/application/goroutinelint"
-	"github.com/curtbushko/go-ai-lint/internal/application/initlint"
-	"github.com/curtbushko/go-ai-lint/internal/application/interfacelint"
-	"github.com/curtbushko/go-ai-lint/internal/application/iolint"
-	"github.com/curtbushko/go-ai-lint/internal/application/naminglint"
-	"github.com/curtbushko/go-ai-lint/internal/application/optionlint"
-	"github.com/curtbushko/go-ai-lint/internal/application/paniclint"
-	"github.com/curtbushko/go-ai-lint/internal/application/slicemaplint"
-	"github.com/curtbushko/go-ai-lint/internal/application/stringlint"
-	"github.com/curtbushko/go-ai-lint/internal/application/testlint"
-	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
 func main() {
-	// Parse flags and execute immediate actions (--init, --show-config)
-	cli := NewCLI()
-	shouldExit, err := cli.ParseAndExecute(os.Args[1:], os.Stdout)
-	if err != nil {
+	if err := Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "go-ai-lint: %v\n", err)
 		os.Exit(1)
 	}
-	if shouldExit {
-		os.Exit(0)
-	}
-
-	// Apply nolint config setting
-	if cfg := cli.Config(); cfg != nil {
-		domain.SetNolintEnabled(cfg.Nolint.Enabled)
-	}
-
-	// Run analyzers with our custom runner that provides success feedback
-	analyzers := []*analysis.Analyzer{
-		cmdlint.New().Analyzer(),
-		concurrencylint.New().Analyzer(),
-		contextlint.New().Analyzer(),
-		deferlint.New().Analyzer(),
-		errorlint.New().Analyzer(),
-		goroutinelint.New().Analyzer(),
-		initlint.New().Analyzer(),
-		interfacelint.New().Analyzer(),
-		iolint.New().Analyzer(),
-		naminglint.New().Analyzer(),
-		optionlint.New().Analyzer(),
-		paniclint.New().Analyzer(),
-		slicemaplint.New().Analyzer(),
-		stringlint.New().Analyzer(),
-		testlint.New().Analyzer(),
-	}
-
-	exitCode := RunAnalyzers(os.Stdout, os.Stderr, analyzers, cli.RemainingArgs())
-	os.Exit(exitCode)
 }

@@ -3,6 +3,8 @@ package domain_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
@@ -31,9 +33,7 @@ func TestCategoryConstants(t *testing.T) {
 	// Verify they are all different
 	seen := make(map[domain.Category]bool)
 	for _, cat := range categories {
-		if seen[cat] {
-			t.Errorf("Duplicate category: %s", cat)
-		}
+		assert.False(t, seen[cat], "Duplicate category: %s", cat)
 		seen[cat] = true
 	}
 }
@@ -65,9 +65,7 @@ func TestCategoryString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
 			got := tt.category.String()
-			if got != tt.want {
-				t.Errorf("Category.String() = %q, want %q", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "Category.String()")
 		})
 	}
 }

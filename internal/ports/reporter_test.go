@@ -3,6 +3,9 @@ package ports_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 	"github.com/curtbushko/go-ai-lint/internal/ports"
 )
@@ -31,12 +34,8 @@ func TestReporterReport(t *testing.T) {
 	}
 
 	err := mock.Report(issues)
-	if err != nil {
-		t.Errorf("Report() error = %v", err)
-	}
-	if len(mock.reported) != 1 {
-		t.Errorf("reported %d issues, want 1", len(mock.reported))
-	}
+	require.NoError(t, err)
+	assert.Len(t, mock.reported, 1)
 }
 
 func TestFormatConstants(t *testing.T) {
@@ -52,9 +51,7 @@ func TestFormatConstants(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
-			if string(tt.format) != tt.want {
-				t.Errorf("Format = %q, want %q", tt.format, tt.want)
-			}
+			assert.Equal(t, tt.want, string(tt.format))
 		})
 	}
 }

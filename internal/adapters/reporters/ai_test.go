@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/curtbushko/go-ai-lint/internal/adapters/reporters"
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
@@ -42,43 +45,26 @@ func TestAIReporter(t *testing.T) {
 	reporter := reporters.NewAIReporter(&buf)
 
 	err := reporter.Report(issues)
-	if err != nil {
-		t.Fatalf("Report() error = %v", err)
-	}
+	require.NoError(t, err)
 
 	// Parse the output
 	var result []reporters.AIIssue
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Failed to parse JSON output: %v\nOutput: %s", err, buf.String())
-	}
+	err = json.Unmarshal(buf.Bytes(), &result)
+	require.NoError(t, err, "Failed to parse JSON output: %s", buf.String())
 
-	if len(result) != 1 {
-		t.Fatalf("Expected 1 issue, got %d", len(result))
-	}
+	require.Len(t, result, 1, "Expected 1 issue")
 
 	issue := result[0]
 
 	// Check basic fields
-	if issue.ID != testIssueID {
-		t.Errorf("ID = %q, want %s", issue.ID, testIssueID)
-	}
+	assert.Equal(t, testIssueID, issue.ID)
 
 	// Check AI guidance fields
-	if issue.Why == "" {
-		t.Error("Why should not be empty")
-	}
-	if issue.Fix == "" {
-		t.Error("Fix should not be empty")
-	}
-	if issue.Example.Bad == "" {
-		t.Error("Example.Bad should not be empty")
-	}
-	if issue.Example.Good == "" {
-		t.Error("Example.Good should not be empty")
-	}
-	if len(issue.CommonMistakes) == 0 {
-		t.Error("CommonMistakes should not be empty")
-	}
+	assert.NotEmpty(t, issue.Why, "Why should not be empty")
+	assert.NotEmpty(t, issue.Fix, "Fix should not be empty")
+	assert.NotEmpty(t, issue.Example.Bad, "Example.Bad should not be empty")
+	assert.NotEmpty(t, issue.Example.Good, "Example.Good should not be empty")
+	assert.NotEmpty(t, issue.CommonMistakes, "CommonMistakes should not be empty")
 }
 
 func TestAIReporterContainsGuidance(t *testing.T) {
@@ -115,8 +101,6 @@ func TestAIReporterContainsGuidance(t *testing.T) {
 	}
 
 	for _, check := range checks {
-		if !bytes.Contains(buf.Bytes(), []byte(check)) {
-			t.Errorf("Output missing %q\nGot: %s", check, output)
-		}
+		assert.True(t, bytes.Contains(buf.Bytes(), []byte(check)), "Output missing %q\nGot: %s", check, output)
 	}
 }

@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/curtbushko/go-ai-lint/internal/config"
 )
 
@@ -21,46 +24,26 @@ func TestDefault(t *testing.T) {
 	cfg := config.Default()
 
 	// Check version
-	if cfg.Version != 1 {
-		t.Errorf("Default().Version = %d, want 1", cfg.Version)
-	}
+	assert.Equal(t, 1, cfg.Version, "Default().Version")
 
 	// Check run defaults
-	if cfg.Run.Timeout != 5*time.Minute {
-		t.Errorf("Default().Run.Timeout = %v, want 5m", cfg.Run.Timeout)
-	}
-	if cfg.Run.Concurrency != 0 {
-		t.Errorf("Default().Run.Concurrency = %d, want 0 (auto)", cfg.Run.Concurrency)
-	}
+	assert.Equal(t, 5*time.Minute, cfg.Run.Timeout, "Default().Run.Timeout")
+	assert.Equal(t, 0, cfg.Run.Concurrency, "Default().Run.Concurrency should be 0 (auto)")
 
 	// Check output defaults
-	if cfg.Output.Format != "text" {
-		t.Errorf("Default().Output.Format = %q, want %q", cfg.Output.Format, "text")
-	}
-	if !cfg.Output.PrintAnalyzerName {
-		t.Error("Default().Output.PrintAnalyzerName = false, want true")
-	}
-	if cfg.Output.SortBy != "file" {
-		t.Errorf("Default().Output.SortBy = %q, want %q", cfg.Output.SortBy, "file")
-	}
+	assert.Equal(t, "text", cfg.Output.Format, "Default().Output.Format")
+	assert.True(t, cfg.Output.PrintAnalyzerName, "Default().Output.PrintAnalyzerName should be true")
+	assert.Equal(t, "file", cfg.Output.SortBy, "Default().Output.SortBy")
 
 	// Check nolint defaults
-	if !cfg.Nolint.Enabled {
-		t.Error("Default().Nolint.Enabled = false, want true")
-	}
-	if cfg.Nolint.RequireSpecific {
-		t.Error("Default().Nolint.RequireSpecific = true, want false")
-	}
+	assert.True(t, cfg.Nolint.Enabled, "Default().Nolint.Enabled should be true")
+	assert.False(t, cfg.Nolint.RequireSpecific, "Default().Nolint.RequireSpecific should be false")
 
 	// Check analyzer defaults
-	if !cfg.Analyzers.EnableAll {
-		t.Error("Default().Analyzers.EnableAll = false, want true")
-	}
+	assert.True(t, cfg.Analyzers.EnableAll, "Default().Analyzers.EnableAll should be true")
 
 	// Check severity defaults
-	if cfg.Severity.MinSeverity != "low" {
-		t.Errorf("Default().Severity.MinSeverity = %q, want %q", cfg.Severity.MinSeverity, "low")
-	}
+	assert.Equal(t, "low", cfg.Severity.MinSeverity, "Default().Severity.MinSeverity")
 }
 
 func TestLoadFromReader(t *testing.T) {
@@ -74,9 +57,7 @@ func TestLoadFromReader(t *testing.T) {
 			name: "valid minimal config",
 			yaml: `version: 1`,
 			check: func(t *testing.T, cfg *config.Config) {
-				if cfg.Version != 1 {
-					t.Errorf("Version = %d, want 1", cfg.Version)
-				}
+				assert.Equal(t, 1, cfg.Version)
 			},
 			wantErr: false,
 		},
@@ -94,18 +75,10 @@ run:
     - ".*_mock.go"
 `,
 			check: func(t *testing.T, cfg *config.Config) {
-				if cfg.Run.Timeout != 10*time.Minute {
-					t.Errorf("Run.Timeout = %v, want 10m", cfg.Run.Timeout)
-				}
-				if cfg.Run.Concurrency != 4 {
-					t.Errorf("Run.Concurrency = %d, want 4", cfg.Run.Concurrency)
-				}
-				if len(cfg.Run.SkipDirs) != 2 {
-					t.Errorf("Run.SkipDirs length = %d, want 2", len(cfg.Run.SkipDirs))
-				}
-				if len(cfg.Run.SkipFiles) != 1 {
-					t.Errorf("Run.SkipFiles length = %d, want 1", len(cfg.Run.SkipFiles))
-				}
+				assert.Equal(t, 10*time.Minute, cfg.Run.Timeout)
+				assert.Equal(t, 4, cfg.Run.Concurrency)
+				assert.Len(t, cfg.Run.SkipDirs, 2)
+				assert.Len(t, cfg.Run.SkipFiles, 1)
 			},
 			wantErr: false,
 		},
@@ -119,15 +92,9 @@ output:
   sort-by: severity
 `,
 			check: func(t *testing.T, cfg *config.Config) {
-				if cfg.Output.Format != formatJSON {
-					t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
-				}
-				if cfg.Output.PrintAnalyzerName {
-					t.Error("Output.PrintAnalyzerName = true, want false")
-				}
-				if cfg.Output.SortBy != "severity" {
-					t.Errorf("Output.SortBy = %q, want severity", cfg.Output.SortBy)
-				}
+				assert.Equal(t, formatJSON, cfg.Output.Format)
+				assert.False(t, cfg.Output.PrintAnalyzerName, "PrintAnalyzerName should be false")
+				assert.Equal(t, "severity", cfg.Output.SortBy)
 			},
 			wantErr: false,
 		},
@@ -140,12 +107,8 @@ nolint:
   require-specific: true
 `,
 			check: func(t *testing.T, cfg *config.Config) {
-				if cfg.Nolint.Enabled {
-					t.Error("Nolint.Enabled = true, want false")
-				}
-				if !cfg.Nolint.RequireSpecific {
-					t.Error("Nolint.RequireSpecific = false, want true")
-				}
+				assert.False(t, cfg.Nolint.Enabled, "Nolint.Enabled should be false")
+				assert.True(t, cfg.Nolint.RequireSpecific, "Nolint.RequireSpecific should be true")
 			},
 			wantErr: false,
 		},
@@ -160,12 +123,8 @@ analyzers:
     - stringlint
 `,
 			check: func(t *testing.T, cfg *config.Config) {
-				if cfg.Analyzers.EnableAll {
-					t.Error("Analyzers.EnableAll = true, want false")
-				}
-				if len(cfg.Analyzers.Disable) != 2 {
-					t.Errorf("Analyzers.Disable length = %d, want 2", len(cfg.Analyzers.Disable))
-				}
+				assert.False(t, cfg.Analyzers.EnableAll, "Analyzers.EnableAll should be false")
+				assert.Len(t, cfg.Analyzers.Disable, 2)
 			},
 			wantErr: false,
 		},
@@ -180,12 +139,8 @@ severity:
     - high
 `,
 			check: func(t *testing.T, cfg *config.Config) {
-				if cfg.Severity.MinSeverity != "medium" {
-					t.Errorf("Severity.MinSeverity = %q, want medium", cfg.Severity.MinSeverity)
-				}
-				if len(cfg.Severity.ErrorOn) != 2 {
-					t.Errorf("Severity.ErrorOn length = %d, want 2", len(cfg.Severity.ErrorOn))
-				}
+				assert.Equal(t, "medium", cfg.Severity.MinSeverity)
+				assert.Len(t, cfg.Severity.ErrorOn, 2)
 			},
 			wantErr: false,
 		},
@@ -200,11 +155,12 @@ severity:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg, err := config.LoadFromReader([]byte(tt.yaml))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("LoadFromReader() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Error(t, err, "LoadFromReader() should return error")
 				return
 			}
-			if tt.check != nil && err == nil {
+			require.NoError(t, err, "LoadFromReader() should not return error")
+			if tt.check != nil {
 				tt.check(t, cfg)
 			}
 		})
@@ -221,19 +177,14 @@ version: 1
 output:
   format: json
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err, "failed to write config file")
 
 	// Load config starting from tmpDir
 	cfg, err := config.Load(tmpDir)
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
+	require.NoError(t, err, "Load() should not return error")
 
-	if cfg.Output.Format != formatJSON {
-		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
-	}
+	assert.Equal(t, formatJSON, cfg.Output.Format)
 }
 
 func TestLoadConfigFromParentDir(t *testing.T) {
@@ -242,9 +193,8 @@ func TestLoadConfigFromParentDir(t *testing.T) {
 	parentDir := filepath.Join(tmpDir, "parent")
 	childDir := filepath.Join(parentDir, "child")
 
-	if err := os.MkdirAll(childDir, 0755); err != nil {
-		t.Fatalf("failed to create directories: %v", err)
-	}
+	err := os.MkdirAll(childDir, 0755)
+	require.NoError(t, err, "failed to create directories")
 
 	configPath := filepath.Join(parentDir, ".go-ai-lint.yml")
 	configContent := `
@@ -252,19 +202,14 @@ version: 1
 output:
   format: ai
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err, "failed to write config file")
 
 	// Load config starting from childDir (should find in parentDir)
 	cfg, err := config.Load(childDir)
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
+	require.NoError(t, err, "Load() should not return error")
 
-	if cfg.Output.Format != "ai" {
-		t.Errorf("Output.Format = %q, want ai", cfg.Output.Format)
-	}
+	assert.Equal(t, "ai", cfg.Output.Format)
 }
 
 func TestLoadConfigReturnsDefaultsWhenNoConfigFound(t *testing.T) {
@@ -272,18 +217,12 @@ func TestLoadConfigReturnsDefaultsWhenNoConfigFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	cfg, err := config.Load(tmpDir)
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
+	require.NoError(t, err, "Load() should not return error")
 
 	// Should return defaults
 	defaultCfg := config.Default()
-	if cfg.Version != defaultCfg.Version {
-		t.Errorf("Version = %d, want %d", cfg.Version, defaultCfg.Version)
-	}
-	if cfg.Output.Format != defaultCfg.Output.Format {
-		t.Errorf("Output.Format = %q, want %q", cfg.Output.Format, defaultCfg.Output.Format)
-	}
+	assert.Equal(t, defaultCfg.Version, cfg.Version)
+	assert.Equal(t, defaultCfg.Output.Format, cfg.Output.Format)
 }
 
 func TestLoadConfigFromExplicitPath(t *testing.T) {
@@ -296,25 +235,18 @@ version: 1
 severity:
   min-severity: critical
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err, "failed to write config file")
 
 	cfg, err := config.LoadFromPath(configPath)
-	if err != nil {
-		t.Fatalf("LoadFromPath() error = %v", err)
-	}
+	require.NoError(t, err, "LoadFromPath() should not return error")
 
-	if cfg.Severity.MinSeverity != "critical" {
-		t.Errorf("Severity.MinSeverity = %q, want critical", cfg.Severity.MinSeverity)
-	}
+	assert.Equal(t, "critical", cfg.Severity.MinSeverity)
 }
 
 func TestLoadConfigFromExplicitPathNotFound(t *testing.T) {
 	_, err := config.LoadFromPath("/nonexistent/path/config.yml")
-	if err == nil {
-		t.Error("LoadFromPath() expected error for non-existent file")
-	}
+	assert.Error(t, err, "LoadFromPath() should return error for non-existent file")
 }
 
 func TestConfigMergeWithDefaults(t *testing.T) {
@@ -325,22 +257,14 @@ output:
   format: sarif
 `
 	cfg, err := config.LoadFromReader([]byte(yaml))
-	if err != nil {
-		t.Fatalf("LoadFromReader() error = %v", err)
-	}
+	require.NoError(t, err, "LoadFromReader() should not return error")
 
 	// Explicitly set field
-	if cfg.Output.Format != "sarif" {
-		t.Errorf("Output.Format = %q, want sarif", cfg.Output.Format)
-	}
+	assert.Equal(t, "sarif", cfg.Output.Format)
 
 	// Default for unspecified fields
-	if !cfg.Nolint.Enabled {
-		t.Error("Nolint.Enabled should default to true")
-	}
-	if !cfg.Analyzers.EnableAll {
-		t.Error("Analyzers.EnableAll should default to true")
-	}
+	assert.True(t, cfg.Nolint.Enabled, "Nolint.Enabled should default to true")
+	assert.True(t, cfg.Analyzers.EnableAll, "Analyzers.EnableAll should default to true")
 }
 
 func TestIsAnalyzerEnabled(t *testing.T) {
@@ -407,14 +331,10 @@ analyzers:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg, err := config.LoadFromReader([]byte(tt.yaml))
-			if err != nil {
-				t.Fatalf("LoadFromReader() error = %v", err)
-			}
+			require.NoError(t, err, "LoadFromReader() should not return error")
 
 			got := cfg.IsAnalyzerEnabled(tt.analyzerName)
-			if got != tt.want {
-				t.Errorf("IsAnalyzerEnabled(%q) = %v, want %v", tt.analyzerName, got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "IsAnalyzerEnabled(%q)", tt.analyzerName)
 		})
 	}
 }
@@ -428,25 +348,18 @@ version: 1
 output:
   format: sarif
 `
-	if err := os.WriteFile(explicitPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
+	err := os.WriteFile(explicitPath, []byte(configContent), 0644)
+	require.NoError(t, err, "failed to write config file")
 
 	// Load with explicit path should use that config
 	cfg, err := config.LoadWithOverrides("/some/other/dir", explicitPath)
-	if err != nil {
-		t.Fatalf("LoadWithOverrides() error = %v", err)
-	}
-	if cfg.Output.Format != "sarif" {
-		t.Errorf("Output.Format = %q, want sarif", cfg.Output.Format)
-	}
+	require.NoError(t, err, "LoadWithOverrides() should not return error")
+	assert.Equal(t, "sarif", cfg.Output.Format)
 }
 
 func TestLoadWithOverridesExplicitPathNotFound(t *testing.T) {
 	_, err := config.LoadWithOverrides("/some/dir", "/nonexistent/config.yml")
-	if err == nil {
-		t.Error("LoadWithOverrides() expected error for non-existent explicit path")
-	}
+	assert.Error(t, err, "LoadWithOverrides() should return error for non-existent explicit path")
 }
 
 func TestLoadWithOverridesFallsBackToDiscovery(t *testing.T) {
@@ -458,18 +371,13 @@ version: 1
 output:
   format: json
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err, "failed to write config file")
 
 	// Load with empty explicit path should use discovery
 	cfg, err := config.LoadWithOverrides(tmpDir, "")
-	if err != nil {
-		t.Fatalf("LoadWithOverrides() error = %v", err)
-	}
-	if cfg.Output.Format != formatJSON {
-		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
-	}
+	require.NoError(t, err, "LoadWithOverrides() should not return error")
+	assert.Equal(t, formatJSON, cfg.Output.Format)
 }
 
 func TestToYAML(t *testing.T) {
@@ -506,36 +414,16 @@ severity:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg, err := config.LoadFromReader([]byte(tt.yaml))
-			if err != nil {
-				t.Fatalf("LoadFromReader() error = %v", err)
-			}
+			require.NoError(t, err, "LoadFromReader() should not return error")
 
 			got, err := cfg.ToYAML()
-			if err != nil {
-				t.Fatalf("ToYAML() error = %v", err)
-			}
+			require.NoError(t, err, "ToYAML() should not return error")
 
 			for _, substr := range tt.wantSubstr {
-				if !contains(got, substr) {
-					t.Errorf("ToYAML() output missing %q\nGot:\n%s", substr, got)
-				}
+				assert.Contains(t, got, substr, "ToYAML() output should contain %q", substr)
 			}
 		})
 	}
-}
-
-// contains checks if s contains substr.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 func TestGenerateDefaultConfig(t *testing.T) {
@@ -543,39 +431,25 @@ func TestGenerateDefaultConfig(t *testing.T) {
 	content := config.GenerateDefaultConfig()
 
 	// Then: Config contains version
-	if !contains(content, "version: 1") {
-		t.Error("GenerateDefaultConfig() missing 'version: 1'")
-	}
+	assert.Contains(t, content, "version: 1", "GenerateDefaultConfig() should contain 'version: 1'")
 
 	// Then: Config contains helpful comments
-	if !contains(content, "# go-ai-lint configuration") {
-		t.Error("GenerateDefaultConfig() missing header comment")
-	}
+	assert.Contains(t, content, "# go-ai-lint configuration", "GenerateDefaultConfig() should contain header comment")
 
 	// Then: Config contains run section
-	if !contains(content, "run:") {
-		t.Error("GenerateDefaultConfig() missing 'run:' section")
-	}
+	assert.Contains(t, content, "run:", "GenerateDefaultConfig() should contain 'run:' section")
 
 	// Then: Config contains output section
-	if !contains(content, "output:") {
-		t.Error("GenerateDefaultConfig() missing 'output:' section")
-	}
+	assert.Contains(t, content, "output:", "GenerateDefaultConfig() should contain 'output:' section")
 
 	// Then: Config contains analyzers section
-	if !contains(content, "analyzers:") {
-		t.Error("GenerateDefaultConfig() missing 'analyzers:' section")
-	}
+	assert.Contains(t, content, "analyzers:", "GenerateDefaultConfig() should contain 'analyzers:' section")
 
 	// Then: Config contains severity section
-	if !contains(content, "severity:") {
-		t.Error("GenerateDefaultConfig() missing 'severity:' section")
-	}
+	assert.Contains(t, content, "severity:", "GenerateDefaultConfig() should contain 'severity:' section")
 
 	// Then: Config contains nolint section
-	if !contains(content, "nolint:") {
-		t.Error("GenerateDefaultConfig() missing 'nolint:' section")
-	}
+	assert.Contains(t, content, "nolint:", "GenerateDefaultConfig() should contain 'nolint:' section")
 }
 
 func TestValidate(t *testing.T) {
@@ -621,13 +495,13 @@ output:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg, err := config.LoadFromReader([]byte(tt.yaml))
-			if err != nil {
-				t.Fatalf("LoadFromReader() error = %v", err)
-			}
+			require.NoError(t, err, "LoadFromReader() should not return error")
 
 			err = cfg.Validate()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Error(t, err, "Validate() should return error")
+			} else {
+				assert.NoError(t, err, "Validate() should not return error")
 			}
 		})
 	}
@@ -642,9 +516,7 @@ analyzers:
   enable: []
 `
 	cfg, err := config.LoadFromReader([]byte(yaml))
-	if err != nil {
-		t.Fatalf("LoadFromReader() error = %v", err)
-	}
+	require.NoError(t, err, "LoadFromReader() should not return error")
 
 	// When: Merge with --enable=deferlint,errorlint
 	overrides := config.CLIOverrides{
@@ -653,15 +525,9 @@ analyzers:
 	cfg.Merge(overrides)
 
 	// Then: deferlint and errorlint are enabled, others disabled
-	if !cfg.IsAnalyzerEnabled("deferlint") {
-		t.Error("deferlint should be enabled after merge")
-	}
-	if !cfg.IsAnalyzerEnabled("errorlint") {
-		t.Error("errorlint should be enabled after merge")
-	}
-	if cfg.IsAnalyzerEnabled("optionlint") {
-		t.Error("optionlint should remain disabled (not in enable list)")
-	}
+	assert.True(t, cfg.IsAnalyzerEnabled("deferlint"), "deferlint should be enabled after merge")
+	assert.True(t, cfg.IsAnalyzerEnabled("errorlint"), "errorlint should be enabled after merge")
+	assert.False(t, cfg.IsAnalyzerEnabled("optionlint"), "optionlint should remain disabled (not in enable list)")
 }
 
 func TestMergeDisableFlagRemovesAnalyzer(t *testing.T) {
@@ -672,9 +538,7 @@ analyzers:
   enable-all: true
 `
 	cfg, err := config.LoadFromReader([]byte(yaml))
-	if err != nil {
-		t.Fatalf("LoadFromReader() error = %v", err)
-	}
+	require.NoError(t, err, "LoadFromReader() should not return error")
 
 	// When: Merge with --disable=optionlint
 	overrides := config.CLIOverrides{
@@ -683,15 +547,9 @@ analyzers:
 	cfg.Merge(overrides)
 
 	// Then: optionlint is disabled, all others remain enabled
-	if cfg.IsAnalyzerEnabled("optionlint") {
-		t.Error("optionlint should be disabled after merge")
-	}
-	if !cfg.IsAnalyzerEnabled("deferlint") {
-		t.Error("deferlint should remain enabled (enable-all: true)")
-	}
-	if !cfg.IsAnalyzerEnabled("errorlint") {
-		t.Error("errorlint should remain enabled (enable-all: true)")
-	}
+	assert.False(t, cfg.IsAnalyzerEnabled("optionlint"), "optionlint should be disabled after merge")
+	assert.True(t, cfg.IsAnalyzerEnabled("deferlint"), "deferlint should remain enabled (enable-all: true)")
+	assert.True(t, cfg.IsAnalyzerEnabled("errorlint"), "errorlint should remain enabled (enable-all: true)")
 }
 
 func TestMergeMinSeverityFilters(t *testing.T) {
@@ -702,9 +560,7 @@ severity:
   min-severity: low
 `
 	cfg, err := config.LoadFromReader([]byte(yaml))
-	if err != nil {
-		t.Fatalf("LoadFromReader() error = %v", err)
-	}
+	require.NoError(t, err, "LoadFromReader() should not return error")
 
 	// When: Merge with --min-severity=high
 	overrides := config.CLIOverrides{
@@ -713,9 +569,7 @@ severity:
 	cfg.Merge(overrides)
 
 	// Then: min-severity is high
-	if cfg.Severity.MinSeverity != "high" {
-		t.Errorf("Severity.MinSeverity = %q, want high", cfg.Severity.MinSeverity)
-	}
+	assert.Equal(t, "high", cfg.Severity.MinSeverity)
 }
 
 func TestMergeFormatFlagChangesOutput(t *testing.T) {
@@ -726,9 +580,7 @@ output:
   format: text
 `
 	cfg, err := config.LoadFromReader([]byte(yaml))
-	if err != nil {
-		t.Fatalf("LoadFromReader() error = %v", err)
-	}
+	require.NoError(t, err, "LoadFromReader() should not return error")
 
 	// When: Merge with --format=json
 	overrides := config.CLIOverrides{
@@ -737,9 +589,7 @@ output:
 	cfg.Merge(overrides)
 
 	// Then: Output format is JSON
-	if cfg.Output.Format != formatJSON {
-		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
-	}
+	assert.Equal(t, formatJSON, cfg.Output.Format)
 }
 
 func TestMergeCLIFlagsOverrideConfig(t *testing.T) {
@@ -752,9 +602,7 @@ severity:
   min-severity: low
 `
 	cfg, err := config.LoadFromReader([]byte(yaml))
-	if err != nil {
-		t.Fatalf("LoadFromReader() error = %v", err)
-	}
+	require.NoError(t, err, "LoadFromReader() should not return error")
 
 	// When: Merge with --format=json --min-severity=high
 	overrides := config.CLIOverrides{
@@ -764,12 +612,8 @@ severity:
 	cfg.Merge(overrides)
 
 	// Then: Merged config uses CLI values
-	if cfg.Output.Format != formatJSON {
-		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatJSON)
-	}
-	if cfg.Severity.MinSeverity != "high" {
-		t.Errorf("Severity.MinSeverity = %q, want high", cfg.Severity.MinSeverity)
-	}
+	assert.Equal(t, formatJSON, cfg.Output.Format)
+	assert.Equal(t, "high", cfg.Severity.MinSeverity)
 }
 
 func TestMergeEmptyOverridesPreservesConfig(t *testing.T) {
@@ -786,24 +630,16 @@ analyzers:
     - deferlint
 `
 	cfg, err := config.LoadFromReader([]byte(yaml))
-	if err != nil {
-		t.Fatalf("LoadFromReader() error = %v", err)
-	}
+	require.NoError(t, err, "LoadFromReader() should not return error")
 
 	// When: Merge with empty overrides
 	overrides := config.CLIOverrides{}
 	cfg.Merge(overrides)
 
 	// Then: Original config is preserved
-	if cfg.Output.Format != formatSarif {
-		t.Errorf("Output.Format = %q, want %s", cfg.Output.Format, formatSarif)
-	}
-	if cfg.Severity.MinSeverity != "medium" {
-		t.Errorf("Severity.MinSeverity = %q, want medium", cfg.Severity.MinSeverity)
-	}
-	if !cfg.IsAnalyzerEnabled("deferlint") {
-		t.Error("deferlint should remain enabled")
-	}
+	assert.Equal(t, formatSarif, cfg.Output.Format)
+	assert.Equal(t, "medium", cfg.Severity.MinSeverity)
+	assert.True(t, cfg.IsAnalyzerEnabled("deferlint"), "deferlint should remain enabled")
 }
 
 func TestExampleConfigParseable(t *testing.T) {
@@ -819,29 +655,20 @@ func TestExampleConfigParseable(t *testing.T) {
 	cfg, err := config.LoadFromPath(exampleConfigPath)
 
 	// Then: No parse errors
-	if err != nil {
-		t.Fatalf("LoadFromPath(%s) error = %v", exampleConfigPath, err)
-	}
+	require.NoError(t, err, "LoadFromPath(%s) should not return error", exampleConfigPath)
 
 	// Then: Config validates successfully
-	if err := cfg.Validate(); err != nil {
-		t.Fatalf("Validate() error = %v", err)
-	}
+	err = cfg.Validate()
+	require.NoError(t, err, "Validate() should not return error")
 
 	// Then: Config has expected structure
-	if cfg.Version != 1 {
-		t.Errorf("Version = %d, want 1", cfg.Version)
-	}
+	assert.Equal(t, 1, cfg.Version)
 
 	// Then: Output format is valid
-	if cfg.Output.Format == "" {
-		t.Error("Output.Format should not be empty")
-	}
+	assert.NotEmpty(t, cfg.Output.Format, "Output.Format should not be empty")
 
 	// Then: Severity is valid
-	if cfg.Severity.MinSeverity == "" {
-		t.Error("Severity.MinSeverity should not be empty")
-	}
+	assert.NotEmpty(t, cfg.Severity.MinSeverity, "Severity.MinSeverity should not be empty")
 }
 
 // findExampleConfig walks up directories to find .go-ai-lint.yml.example.
@@ -851,9 +678,7 @@ func findExampleConfig(t *testing.T) string {
 	// Get the directory of this test file
 	// Start from the current working directory during test execution
 	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get working directory: %v", err)
-	}
+	require.NoError(t, err, "failed to get working directory")
 
 	// Walk up to find the example config
 	dir := cwd
@@ -866,7 +691,7 @@ func findExampleConfig(t *testing.T) string {
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			// Reached root
-			t.Fatalf("could not find .go-ai-lint.yml.example starting from %s", cwd)
+			require.Fail(t, "could not find .go-ai-lint.yml.example starting from %s", cwd)
 		}
 		dir = parent
 	}

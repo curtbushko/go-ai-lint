@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/golangci/plugin-module-register/register"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/analysis/analysistest"
 )
@@ -19,7 +20,7 @@ func TestGoAILintPlugin(t *testing.T) {
 
 	analyzers, err := plugin.BuildAnalyzers()
 	require.NoError(t, err)
-	require.NotEmpty(t, analyzers, "should have at least one analyzer")
+	assert.NotEmpty(t, analyzers, "should have at least one analyzer")
 
 	// Test deferlint analyzer
 	var deferlintAnalyzer *struct {
@@ -35,7 +36,7 @@ func TestGoAILintPlugin(t *testing.T) {
 			break
 		}
 	}
-	require.NotNil(t, deferlintAnalyzer, "deferlint analyzer should be present")
+	assert.NotNil(t, deferlintAnalyzer, "deferlint analyzer should be present")
 
 	// Run deferlint on testdata
 	analysistest.Run(t, testdataDir(t), analyzers[deferlintAnalyzer.index], "deferlint")
@@ -55,8 +56,8 @@ func TestGoAILintPluginWithSettings(t *testing.T) {
 
 	analyzers, err := plugin.BuildAnalyzers()
 	require.NoError(t, err)
-	require.Len(t, analyzers, 1, "should have exactly one analyzer when filtered")
-	require.Equal(t, "deferlint", analyzers[0].Name)
+	assert.Len(t, analyzers, 1, "should have exactly one analyzer when filtered")
+	assert.Equal(t, "deferlint", analyzers[0].Name)
 }
 
 func TestGoAILintPluginLoadMode(t *testing.T) {
@@ -67,7 +68,7 @@ func TestGoAILintPluginLoadMode(t *testing.T) {
 	require.NoError(t, err)
 
 	loadMode := plugin.GetLoadMode()
-	require.NotEmpty(t, loadMode, "load mode should not be empty")
+	assert.NotEmpty(t, loadMode, "load mode should not be empty")
 }
 
 func TestGoAILintPluginAllAnalyzers(t *testing.T) {
@@ -98,7 +99,7 @@ func TestGoAILintPluginAllAnalyzers(t *testing.T) {
 
 	analyzers, err := plugin.BuildAnalyzers()
 	require.NoError(t, err)
-	require.Len(t, analyzers, len(expectedAnalyzers), "should have exactly %d analyzers", len(expectedAnalyzers))
+	assert.Len(t, analyzers, len(expectedAnalyzers), "should have exactly %d analyzers", len(expectedAnalyzers))
 
 	// Build a map of analyzer names
 	analyzerNames := make(map[string]bool)
@@ -108,7 +109,7 @@ func TestGoAILintPluginAllAnalyzers(t *testing.T) {
 
 	// Verify each expected analyzer is present
 	for _, name := range expectedAnalyzers {
-		require.True(t, analyzerNames[name], "analyzer %s should be registered", name)
+		assert.True(t, analyzerNames[name], "analyzer %s should be registered", name)
 	}
 }
 

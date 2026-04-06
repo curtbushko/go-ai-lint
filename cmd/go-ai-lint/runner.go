@@ -33,7 +33,7 @@ func RunAnalyzers(stdout, stderr io.Writer, analyzers []*analysis.Analyzer, args
 
 	pkgs, err := packages.Load(cfg, args...)
 	if err != nil {
-		fmt.Fprintf(stderr, "go-ai-lint: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "go-ai-lint: %v\n", err)
 		return 1
 	}
 
@@ -41,7 +41,7 @@ func RunAnalyzers(stdout, stderr io.Writer, analyzers []*analysis.Analyzer, args
 	var loadErrors bool
 	packages.Visit(pkgs, nil, func(pkg *packages.Package) {
 		for _, err := range pkg.Errors {
-			fmt.Fprintf(stderr, "%v\n", err)
+			_, _ = fmt.Fprintf(stderr, "%v\n", err)
 			loadErrors = true
 		}
 	})
@@ -63,12 +63,12 @@ func RunAnalyzers(stdout, stderr io.Writer, analyzers []*analysis.Analyzer, args
 
 	// Print diagnostics
 	for _, d := range allDiagnostics {
-		fmt.Fprintf(stderr, "%s\n", d.message)
+		_, _ = fmt.Fprintf(stderr, "%s\n", d.message)
 	}
 
 	// Print summary
 	if len(allDiagnostics) == 0 {
-		fmt.Fprintf(stdout, "go-ai-lint: no issues found\n")
+		_, _ = fmt.Fprintf(stdout, "go-ai-lint: no issues found\n")
 		return 0
 	}
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -20,13 +21,8 @@ func TestRunnerPrintsSuccessOnNoIssues(t *testing.T) {
 	exitCode := RunAnalyzers(&stdout, &stderr, []*analysis.Analyzer{noop}, []string{"./testdata/clean"})
 
 	// Then: Exit code is 0 and success message is printed
-	if exitCode != 0 {
-		t.Errorf("exit code = %d, want 0", exitCode)
-	}
-	output := stdout.String()
-	if output == "" {
-		t.Error("expected success message on stdout, got empty")
-	}
+	assert.Equal(t, 0, exitCode)
+	assert.NotEmpty(t, stdout.String(), "expected success message on stdout")
 }
 
 func TestRunnerPrintsIssuesOnError(t *testing.T) {
@@ -47,8 +43,6 @@ func TestRunnerPrintsIssuesOnError(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	exitCode := RunAnalyzers(&stdout, &stderr, []*analysis.Analyzer{issueAnalyzer}, []string{"./testdata/clean"})
 
-	// Then: Exit code is non-zero and issues are in output
-	if exitCode == 0 {
-		t.Error("exit code = 0, want non-zero for issues")
-	}
+	// Then: Exit code is non-zero for issues
+	assert.NotEqual(t, 0, exitCode, "exit code should be non-zero for issues")
 }

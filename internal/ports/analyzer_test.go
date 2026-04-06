@@ -3,6 +3,8 @@ package ports_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/analysis"
 
 	"github.com/curtbushko/go-ai-lint/internal/ports"
@@ -31,23 +33,15 @@ func TestAnalyzerInterface(t *testing.T) {
 	// Test that the interface can be implemented
 	mock := &mockAnalyzer{name: "test"}
 	var _ ports.Analyzer = mock
-	if mock.Name() != "test" {
-		t.Errorf("Name() = %q, want test", mock.Name())
-	}
+	assert.Equal(t, "test", mock.Name())
 }
 
 func TestAnalyzerMethods(t *testing.T) {
 	mock := &mockAnalyzer{name: "testlint"}
 
-	if mock.Name() != "testlint" {
-		t.Errorf("Name() = %q, want testlint", mock.Name())
-	}
+	assert.Equal(t, "testlint", mock.Name())
 
 	analyzer := mock.Analyzer()
-	if analyzer == nil {
-		t.Fatal("Analyzer() returned nil")
-	}
-	if analyzer.Name != "testlint" {
-		t.Errorf("Analyzer().Name = %q, want testlint", analyzer.Name)
-	}
+	require.NotNil(t, analyzer, "Analyzer() returned nil")
+	assert.Equal(t, "testlint", analyzer.Name)
 }

@@ -3,6 +3,8 @@ package domain_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
 
@@ -15,21 +17,11 @@ func TestPositionFields(t *testing.T) {
 		EndColumn: 25,
 	}
 
-	if pos.Filename != "test.go" {
-		t.Errorf("Filename = %q, want %q", pos.Filename, "test.go")
-	}
-	if pos.Line != 42 {
-		t.Errorf("Line = %d, want %d", pos.Line, 42)
-	}
-	if pos.Column != 10 {
-		t.Errorf("Column = %d, want %d", pos.Column, 10)
-	}
-	if pos.EndLine != 42 {
-		t.Errorf("EndLine = %d, want %d", pos.EndLine, 42)
-	}
-	if pos.EndColumn != 25 {
-		t.Errorf("EndColumn = %d, want %d", pos.EndColumn, 25)
-	}
+	assert.Equal(t, "test.go", pos.Filename, "Filename")
+	assert.Equal(t, 42, pos.Line, "Line")
+	assert.Equal(t, 10, pos.Column, "Column")
+	assert.Equal(t, 42, pos.EndLine, "EndLine")
+	assert.Equal(t, 25, pos.EndColumn, "EndColumn")
 }
 
 func TestPositionString(t *testing.T) {
@@ -70,9 +62,7 @@ func TestPositionString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.pos.String()
-			if got != tt.want {
-				t.Errorf("Position.String() = %q, want %q", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "Position.String()")
 		})
 	}
 }

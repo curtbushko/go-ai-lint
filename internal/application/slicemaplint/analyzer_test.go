@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/analysis/analysistest"
 
 	"github.com/curtbushko/go-ai-lint/internal/application/slicemaplint"
@@ -15,12 +17,8 @@ func TestNilMapWrite(t *testing.T) {
 
 	// Verify analyzer metadata
 	analysisAnalyzer := mapLinter.Analyzer()
-	if analysisAnalyzer.Name != "slicemaplint" {
-		t.Errorf("Analyzer name = %q, want slicemaplint", analysisAnalyzer.Name)
-	}
-	if analysisAnalyzer.Doc == "" {
-		t.Error("Analyzer doc should not be empty")
-	}
+	assert.Equal(t, "slicemaplint", analysisAnalyzer.Name, "Analyzer name mismatch")
+	assert.NotEmpty(t, analysisAnalyzer.Doc, "Analyzer doc should not be empty")
 
 	// Run analysis on testdata
 	analysistest.Run(t, testdataDir(t), analysisAnalyzer, "slicemaplint")
@@ -28,18 +26,14 @@ func TestNilMapWrite(t *testing.T) {
 
 func TestAnalyzerName(t *testing.T) {
 	mapLinter := slicemaplint.New()
-	if mapLinter.Name() != "slicemaplint" {
-		t.Errorf("Name() = %q, want slicemaplint", mapLinter.Name())
-	}
+	assert.Equal(t, "slicemaplint", mapLinter.Name(), "Name() mismatch")
 }
 
 func testdataDir(t *testing.T) string {
 	t.Helper()
 
 	_, testFilename, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("unable to get current test filename")
-	}
+	require.True(t, ok, "unable to get current test filename")
 
 	return filepath.Join(filepath.Dir(testFilename), "..", "..", "..", "testdata")
 }

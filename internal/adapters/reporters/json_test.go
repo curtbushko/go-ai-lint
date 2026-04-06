@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/curtbushko/go-ai-lint/internal/adapters/reporters"
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
@@ -29,30 +32,19 @@ func TestJSONReporter(t *testing.T) {
 	reporter := reporters.NewJSONReporter(&buf)
 
 	err := reporter.Report(issues)
-	if err != nil {
-		t.Fatalf("Report() error = %v", err)
-	}
+	require.NoError(t, err)
 
 	// Parse the output
 	var result []reporters.JSONIssue
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Failed to parse JSON output: %v", err)
-	}
+	err = json.Unmarshal(buf.Bytes(), &result)
+	require.NoError(t, err, "Failed to parse JSON output")
 
-	if len(result) != 1 {
-		t.Fatalf("Expected 1 issue, got %d", len(result))
-	}
+	require.Len(t, result, 1, "Expected 1 issue")
 
 	issue := result[0]
-	if issue.ID != testIssueID {
-		t.Errorf("ID = %q, want %s", issue.ID, testIssueID)
-	}
-	if issue.File != "service.go" {
-		t.Errorf("File = %q, want service.go", issue.File)
-	}
-	if issue.Line != 42 {
-		t.Errorf("Line = %d, want 42", issue.Line)
-	}
+	assert.Equal(t, testIssueID, issue.ID)
+	assert.Equal(t, "service.go", issue.File)
+	assert.Equal(t, 42, issue.Line)
 }
 
 func TestJSONReporterEmptyIssues(t *testing.T) {
@@ -60,16 +52,11 @@ func TestJSONReporterEmptyIssues(t *testing.T) {
 	reporter := reporters.NewJSONReporter(&buf)
 
 	err := reporter.Report([]domain.Issue{})
-	if err != nil {
-		t.Fatalf("Report() error = %v", err)
-	}
+	require.NoError(t, err)
 
 	var result []reporters.JSONIssue
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Failed to parse JSON output: %v", err)
-	}
+	err = json.Unmarshal(buf.Bytes(), &result)
+	require.NoError(t, err, "Failed to parse JSON output")
 
-	if len(result) != 0 {
-		t.Errorf("Expected empty array, got %d items", len(result))
-	}
+	assert.Empty(t, result, "Expected empty array")
 }

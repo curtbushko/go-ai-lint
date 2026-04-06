@@ -1,8 +1,9 @@
 package domain_test
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/curtbushko/go-ai-lint/internal/domain"
 )
@@ -29,33 +30,15 @@ func TestIssueFields(t *testing.T) {
 		},
 	}
 
-	if issue.ID != "AIL001" {
-		t.Errorf("ID = %q, want AIL001", issue.ID)
-	}
-	if issue.Name != "defer-in-loop" {
-		t.Errorf("Name = %q, want defer-in-loop", issue.Name)
-	}
-	if issue.Category != domain.CategoryDefer {
-		t.Errorf("Category = %s, want defer", issue.Category)
-	}
-	if issue.Severity != domain.SeverityCritical {
-		t.Errorf("Severity = %s, want critical", issue.Severity)
-	}
-	if issue.Confidence != 1.0 {
-		t.Errorf("Confidence = %f, want 1.0", issue.Confidence)
-	}
-	if len(issue.CommonMistakes) != 2 {
-		t.Errorf("CommonMistakes len = %d, want 2", len(issue.CommonMistakes))
-	}
-	if issue.Message != "defer inside loop delays resource cleanup" {
-		t.Errorf("Message = %q, want correct message", issue.Message)
-	}
-	if issue.Why != "Deferred calls accumulate until function returns" {
-		t.Errorf("Why = %q, want correct why", issue.Why)
-	}
-	if issue.Fix != "Extract loop body to helper function" {
-		t.Errorf("Fix = %q, want correct fix", issue.Fix)
-	}
+	assert.Equal(t, "AIL001", issue.ID, "ID")
+	assert.Equal(t, "defer-in-loop", issue.Name, "Name")
+	assert.Equal(t, domain.CategoryDefer, issue.Category, "Category")
+	assert.Equal(t, domain.SeverityCritical, issue.Severity, "Severity")
+	assert.Equal(t, 1.0, issue.Confidence, "Confidence")
+	assert.Len(t, issue.CommonMistakes, 2, "CommonMistakes length")
+	assert.Equal(t, "defer inside loop delays resource cleanup", issue.Message, "Message")
+	assert.Equal(t, "Deferred calls accumulate until function returns", issue.Why, "Why")
+	assert.Equal(t, "Extract loop body to helper function", issue.Fix, "Fix")
 }
 
 func TestIssueString(t *testing.T) {
@@ -69,18 +52,10 @@ func TestIssueString(t *testing.T) {
 	got := issue.String()
 
 	// Should contain position, ID, name, and message
-	if !strings.Contains(got, "service.go:42:3") {
-		t.Errorf("String() missing position, got %q", got)
-	}
-	if !strings.Contains(got, "AIL001") {
-		t.Errorf("String() missing ID, got %q", got)
-	}
-	if !strings.Contains(got, "defer-in-loop") {
-		t.Errorf("String() missing name, got %q", got)
-	}
-	if !strings.Contains(got, "defer inside loop") {
-		t.Errorf("String() missing message, got %q", got)
-	}
+	assert.Contains(t, got, "service.go:42:3", "String() should contain position")
+	assert.Contains(t, got, "AIL001", "String() should contain ID")
+	assert.Contains(t, got, "defer-in-loop", "String() should contain name")
+	assert.Contains(t, got, "defer inside loop", "String() should contain message")
 }
 
 func TestNewIssue(t *testing.T) {
@@ -95,13 +70,7 @@ func TestNewIssue(t *testing.T) {
 		"deferred Close() error ignored",
 	)
 
-	if issue.ID != "AIL002" {
-		t.Errorf("ID = %q, want AIL002", issue.ID)
-	}
-	if issue.Position.Filename != "test.go" {
-		t.Errorf("Position.Filename = %q, want test.go", issue.Position.Filename)
-	}
-	if issue.Confidence != 1.0 {
-		t.Errorf("Confidence = %f, want 1.0 (default)", issue.Confidence)
-	}
+	assert.Equal(t, "AIL002", issue.ID, "ID")
+	assert.Equal(t, "test.go", issue.Position.Filename, "Position.Filename")
+	assert.Equal(t, 1.0, issue.Confidence, "Confidence (default)")
 }

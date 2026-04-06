@@ -68,21 +68,7 @@ tasks:
     desc: Run go-ai-lint with all analyzers
     deps: [build]
     cmds:
-      - >-
-        {{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}/go-ai-lint
-        -concurrencylint
-        -contextlint
-        -deferlint
-        -errorlint
-        -goroutinelint
-        -initlint
-        -interfacelint
-        -naminglint
-        -optionlint
-        -paniclint
-        -slicemaplint
-        -stringlint
-        ./...
+      - "{{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}/go-ai-lint ./..."
 
   test:
     desc: Run all tests

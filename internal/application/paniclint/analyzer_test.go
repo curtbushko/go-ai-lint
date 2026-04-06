@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/analysis/analysistest"
 
 	"github.com/curtbushko/go-ai-lint/internal/application/paniclint"
@@ -15,15 +17,9 @@ func TestPaniclint(t *testing.T) {
 
 	// Verify analyzer metadata
 	analysisAnalyzer := panicLinter.Analyzer()
-	if analysisAnalyzer == nil {
-		t.Fatal("Analyzer() returned nil")
-	}
-	if analysisAnalyzer.Name != "paniclint" {
-		t.Errorf("Analyzer name = %q, want paniclint", analysisAnalyzer.Name)
-	}
-	if analysisAnalyzer.Doc == "" {
-		t.Error("Analyzer doc should not be empty")
-	}
+	require.NotNil(t, analysisAnalyzer, "Analyzer() returned nil")
+	assert.Equal(t, "paniclint", analysisAnalyzer.Name, "Analyzer name mismatch")
+	assert.NotEmpty(t, analysisAnalyzer.Doc, "Analyzer doc should not be empty")
 
 	// Run analysis on testdata
 	analysistest.Run(t, testdataDir(t), analysisAnalyzer, "paniclint")
@@ -31,18 +27,14 @@ func TestPaniclint(t *testing.T) {
 
 func TestAnalyzerName(t *testing.T) {
 	panicLinter := paniclint.New()
-	if panicLinter.Name() != "paniclint" {
-		t.Errorf("Name() = %q, want paniclint", panicLinter.Name())
-	}
+	assert.Equal(t, "paniclint", panicLinter.Name(), "Name() mismatch")
 }
 
 func testdataDir(t *testing.T) string {
 	t.Helper()
 
 	_, testFilename, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("unable to get current test filename")
-	}
+	require.True(t, ok, "unable to get current test filename")
 
 	return filepath.Join(filepath.Dir(testFilename), "..", "..", "..", "testdata")
 }
