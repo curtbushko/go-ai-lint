@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/tools/go/analysis/multichecker"
+	"golang.org/x/tools/go/analysis"
 
 	"github.com/curtbushko/go-ai-lint/internal/application/cmdlint"
 	"github.com/curtbushko/go-ai-lint/internal/application/concurrencylint"
@@ -49,11 +49,8 @@ func main() {
 		domain.SetNolintEnabled(cfg.Nolint.Enabled)
 	}
 
-	// Replace os.Args with remaining args for multichecker
-	// multichecker.Main reads os.Args directly
-	os.Args = append([]string{os.Args[0]}, cli.RemainingArgs()...)
-
-	multichecker.Main(
+	// Run analyzers with our custom runner that provides success feedback
+	analyzers := []*analysis.Analyzer{
 		cmdlint.New().Analyzer(),
 		concurrencylint.New().Analyzer(),
 		contextlint.New().Analyzer(),
@@ -69,5 +66,8 @@ func main() {
 		slicemaplint.New().Analyzer(),
 		stringlint.New().Analyzer(),
 		testlint.New().Analyzer(),
-	)
+	}
+
+	exitCode := RunAnalyzers(os.Stdout, os.Stderr, analyzers, cli.RemainingArgs())
+	os.Exit(exitCode)
 }
